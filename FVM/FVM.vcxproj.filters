@@ -53,6 +53,9 @@
     <ClCompile Include="RenderWidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TetMesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="fvm.h">
@@ -70,6 +73,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="RenderWidget.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TetMesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
