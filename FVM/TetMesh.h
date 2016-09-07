@@ -19,6 +19,7 @@ public:
 
 private:
 	void InitModel();
+	void ComputeANs(int tetid);
 
 	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
 	Eigen::MatrixXi m_tets;				// tetrahedra's indices : 4*m matrix

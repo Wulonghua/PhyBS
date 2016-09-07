@@ -100,6 +100,7 @@ void TetMesh::InitModel()
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
 
+	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	for (size_t i = 0; i < n_tets; ++i)
 	{
 		Eigen::Matrix3d Dm = Eigen::Matrix3d::Zero();
@@ -107,9 +108,29 @@ void TetMesh::InitModel()
 		Dm.col(1) = (m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
 		m_Dm_inverses.block<3,3>(0,i*3) = Dm.inverse();
-	}
 
-	std::cout << "tet model has been initialized.";
+		ComputeANs(i);
+	}	
+
+	std::cout << "tet model has been initialized."<<std::endl;
+}
+
+void TetMesh::ComputeANs(int tetid)
+{
+	int edge[3][4] = {{1,0,2,3},{2,0,1,3},{3,0,1,2}};
+	Eigen::Vector3d v1, v2, v3;
+	for (size_t i = 0; i < 3; ++i)
+	{
+		v1 = m_nodes.col(m_tets(edge[i][1], tetid)) - m_nodes.col(m_tets(edge[i][0], tetid));
+		v2 = m_nodes.col(m_tets(edge[i][2], tetid)) - m_nodes.col(m_tets(edge[i][0], tetid));
+		v3 = m_nodes.col(m_tets(edge[i][3], tetid)) - m_nodes.col(m_tets(edge[i][0], tetid));
+
+		// Explanation here: the following line computes b_i = (-1/3)(A_1*N_1+A_2*N_2+A_3*N_3)
+		// Note that cross product of two edges is twice the area of a face times the normal,
+		// So we can simply add one sixth of -sigma times the cross product to each of the three nodes.
+		m_ANs.col(tetid * 3 + i) = -(v1.cross(v2) + v2.cross(v3) + v3.cross(v1)) / 6.0;
+		std::cout << m_ANs.col(tetid*3+i)<<std::endl;
+	}
 }
 
 void TetMesh::SetTetMaterial(double e, double nu)
