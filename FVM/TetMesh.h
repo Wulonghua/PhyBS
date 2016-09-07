@@ -14,13 +14,14 @@ public:
 	void LoadNodesFromFile(QString filename);
 	void LoadTetsFromFile(QString filename);
 	void LoadFacesFromFile(QString filename);
+	void SetTetMaterial(double e, double nu);
 
 
 private:
 	void InitModel();
 
-	Eigen::MatrixXd m_nodes;			// nodes' positions     : n*3 matrix
-	Eigen::MatrixXi m_tets;				// tetrahedra's indices : m*4 matrix
+	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
+	Eigen::MatrixXi m_tets;				// tetrahedra's indices : 4*m matrix
 	Eigen::MatrixXi m_bound_faces;		// the surfaces' indices of tet-mesh's boundary.
 
 	Eigen::MatrixXd m_Dm_inverses;

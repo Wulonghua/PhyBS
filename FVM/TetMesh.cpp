@@ -29,10 +29,10 @@ void TetMesh::LoadNodesFromFile(QString filename)
 		
 		//load nodes' positions
 		int prefix;
-		m_nodes = Eigen::MatrixXd::Zero(n_nodes,3);
+		m_nodes = Eigen::MatrixXd::Zero(3, n_nodes);
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
-			fin >> prefix >> m_nodes(i, 0) >> m_nodes(i, 1) >> m_nodes(i, 2);
+			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
 		}
 		//std::cout << m_nodes;
 	}
@@ -55,10 +55,10 @@ void TetMesh::LoadTetsFromFile(QString filename)
 
 		//load Tets' indices
 		int prefix;
-		m_tets = Eigen::MatrixXi::Zero(n_tets, 4);
+		m_tets = Eigen::MatrixXi::Zero(4, n_tets);
 		for (size_t i = 0; i < n_tets; ++i)
 		{
-			fin >> prefix >> m_tets(i, 0) >> m_tets(i, 1) >> m_tets(i, 2) >> m_tets(i, 3);
+			fin >> prefix >> m_tets(0, i) >> m_tets(1, i) >> m_tets(2, i) >> m_tets(3, i);
 		}
 		//std::cout << m_tets;
 	}
@@ -82,10 +82,10 @@ void TetMesh::LoadFacesFromFile(QString filename)
 
 		//load Tets' indices
 		int prefix;
-		m_bound_faces = Eigen::MatrixXi::Zero(n_bound_faces, 3);
+		m_bound_faces = Eigen::MatrixXi::Zero(3, n_bound_faces);
 		for (size_t i = 0; i < n_tets; ++i)
 		{
-			fin >> prefix >> m_bound_faces(i, 0) >> m_bound_faces(i, 1) >> m_bound_faces(i, 2);
+			fin >> prefix >> m_bound_faces(0,i) >> m_bound_faces(1,i) >> m_bound_faces(2,i);
 		}
 		//std::cout << m_bound_faces;
 	}
@@ -97,17 +97,23 @@ void TetMesh::InitModel()
 	LoadTetsFromFile(QStringLiteral("..\\model\\box\\box.1.ele"));
 	LoadFacesFromFile(QStringLiteral("..\\model\\box\\box.1.face"));
 
-	m_Dm_inverses = Eigen::MatrixXd::Zero(n_tets*3,3);
-	m_ANs = Eigen::MatrixXd::Zero(n_tets*3,3);
+	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
+	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
 
 	for (size_t i = 0; i < n_tets; ++i)
 	{
 		Eigen::Matrix3d Dm = Eigen::Matrix3d::Zero();
-		Dm.col(0) = (m_nodes.row(m_tets(i, 1)) - m_nodes.row(m_tets(i, 0))).transpose();
-		Dm.col(1) = (m_nodes.row(m_tets(i, 2)) - m_nodes.row(m_tets(i, 0))).transpose();
-		Dm.col(2) = (m_nodes.row(m_tets(i, 3)) - m_nodes.row(m_tets(i, 0))).transpose();
-		m_Dm_inverses.block<3,3>(i*3,0) = Dm.inverse();
+		Dm.col(0) = (m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i)));
+		Dm.col(1) = (m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i)));
+		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
+		m_Dm_inverses.block<3,3>(0,i*3) = Dm.inverse();
 	}
 
 	std::cout << "tet model has been initialized.";
+}
+
+void TetMesh::SetTetMaterial(double e, double nu)
+{
+	m_E  = e;
+	m_nu = nu;
 }
