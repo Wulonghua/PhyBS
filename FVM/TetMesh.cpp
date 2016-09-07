@@ -17,7 +17,7 @@ void TetMesh::LoadNodesFromFile(QString filename)
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		std::cout << "Cannot load nodes file." << std::endl;
-		return;
+		exit(0);
 	}
 		
 	QTextStream fin(&file);
@@ -44,7 +44,7 @@ void TetMesh::LoadTetsFromFile(QString filename)
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		std::cout << "Cannot load nodes file." << std::endl;
-		return;
+		exit(0);
 	}
 	QTextStream fin(&file);
 	if (!fin.atEnd())
@@ -70,7 +70,7 @@ void TetMesh::LoadFacesFromFile(QString filename)
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		std::cout << "Cannot load nodes file." << std::endl;
-		return;
+		exit(0);
 	}
 	QTextStream fin(&file);
 
@@ -93,9 +93,9 @@ void TetMesh::LoadFacesFromFile(QString filename)
 
 void TetMesh::InitModel()
 {
-	LoadNodesFromFile(QStringLiteral("G:\\wlh_code\\PhyBS\\model\\box\\box.1.node"));
-	LoadTetsFromFile(QStringLiteral("G:\\wlh_code\\PhyBS\\model\\box\\box.1.ele"));
-	LoadFacesFromFile(QStringLiteral("G:\\wlh_code\\PhyBS\\model\\box\\box.1.face"));
+	LoadNodesFromFile(QStringLiteral("..\\model\\box\\box.1.node"));
+	LoadTetsFromFile(QStringLiteral("..\\model\\box\\box.1.ele"));
+	LoadFacesFromFile(QStringLiteral("..\\model\\box\\box.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(n_tets*3,3);
 	m_ANs = Eigen::MatrixXd::Zero(n_tets*3,3);
