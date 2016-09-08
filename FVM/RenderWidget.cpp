@@ -45,7 +45,8 @@ void RenderWidget::init()
 
 void RenderWidget::draw()
 {
-	//DrawTestCube();
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	DrawTestCube();
 }
 
 void RenderWidget::DrawTestCube()
