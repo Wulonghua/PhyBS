@@ -3,39 +3,91 @@
 
 RenderWidget::RenderWidget(QWidget *parent)
 {
+
 }
 
 
 RenderWidget::~RenderWidget()
 {
+
 }
 
 void RenderWidget::init()
 {
 	restoreStateFromFile();
-	glClearColor(0.9,0.9,0.9,1.0);
+
+	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
+	if (!render) {
+		std::cerr << "Could not obtain required OpenGL context version";
+		exit(1);
+	}
+
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glEnable(GL_LIGHTING);
+	glDisable(GL_POINT_SMOOTH);
+
+	// Light setup
+	//glDisable(GL_LIGHT0);
+	glEnable(GL_LIGHT1);
+
+	//Light default parameters
+	const GLfloat light_ambient[4] = { 1.0, 1.0, 1.0, 1.0 };
+	const GLfloat light_diffuse[4] = { 1.0, 1.0, 1.0, 1.0 };
+	const GLfloat light_specular[4] = { 0.3, 0.3, 0.3, 1.0 };
+
+	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.1f);
+	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.3f);
+	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.3f);
+	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
+	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 }
 
 void RenderWidget::draw()
 {
-	const float nbSteps = 200.0;
+	//DrawTestCube();
+}
 
-	glBegin(GL_QUAD_STRIP);
-	for (int i = 0; i<nbSteps; ++i)
+void RenderWidget::DrawTestCube()
+{
+	// Place light at camera position
+	const qglviewer::Vec cameraPos = camera()->position();
+	//std::cout<<cameraPos[0]<<" "<<cameraPos[1]<<" "<<cameraPos[2]<<std::endl;
+	const GLfloat pos[4] = { cameraPos[0], cameraPos[1], cameraPos[2], 1.0 };
+	glLightfv(GL_LIGHT1, GL_POSITION, pos);
+
+	float vertices[8][3] = { { -0.500000, -0.500000, -0.500000 },
+	{ 0.500000, -0.500000, -0.500000 },
+	{ -0.500000, 0.500000, -0.500000 },
+	{ 0.500000, 0.500000, -0.500000 },
+	{ -0.500000, -0.500000, 0.500000 },
+	{ 0.500000, -0.500000, 0.500000 },
+	{ -0.500000, 0.500000, 0.500000 },
+	{ 0.500000, 0.500000, 0.500000 } };
+
+	int indices[12][3] = { { 2, 1, 0 }, { 1, 2, 3 },
+	{ 4, 2, 0 }, { 2, 4, 6 },
+	{ 1, 4, 0 }, { 4, 1, 5 },
+	{ 6, 5, 7 }, { 5, 6, 4 },
+	{ 3, 6, 7 }, { 6, 3, 2 },
+	{ 5, 3, 7 }, { 3, 5, 1 } };
+
+	float normals[12][3] = { { 0, 0, -1 }, {0,0,-1},
+							 { -1, 0, 0 }, { -1, 0, 0 },
+							 { 0, -1, 0 }, { 0, -1, 0 },
+							 { 0, 0, 1 }, { 0, 0, 1 },
+							 { 0, 1, 0 }, { 0, 1, 0 },
+							 { 1, 0, 0 }, {1,0,0} };
+
+	glColor3f(0.251, 0.424, 0.7);
+	for (int i = 0; i < 12; ++i)
 	{
-		const float ratio = i / nbSteps;
-		const float angle = 21.0*ratio;
-		const float c = cos(angle);
-		const float s = sin(angle);
-		const float r1 = 1.0 - 0.8f*ratio;
-		const float r2 = 0.8f - 0.8f*ratio;
-		const float alt = ratio - 0.5f;
-		const float nor = 0.5f;
-		const float up = sqrt(1.0 - nor*nor);
-		glColor3f(1.0 - ratio, 0.2f, ratio);
-		glNormal3f(nor*c, up, nor*s);
-		glVertex3f(r1*c, alt, r1*s);
-		glVertex3f(r2*c, alt + 0.05f, r2*s);
+		glBegin(GL_TRIANGLES);
+		glNormal3fv(&normals[i][0]);
+		glVertex3fv(&vertices[indices[i][0]][0]);
+		glVertex3fv(&vertices[indices[i][1]][0]);
+		glVertex3fv(&vertices[indices[i][2]][0]);
+		glEnd();
 	}
-	glEnd();
+	
 }

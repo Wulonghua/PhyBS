@@ -16,7 +16,7 @@ void TetMesh::LoadNodesFromFile(QString filename)
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		std::cout << "Cannot load nodes file." << std::endl;
+		std::cerr << "Cannot load nodes file." << std::endl;
 		exit(0);
 	}
 		
@@ -43,7 +43,7 @@ void TetMesh::LoadTetsFromFile(QString filename)
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		std::cout << "Cannot load nodes file." << std::endl;
+		std::cerr << "Cannot load nodes file." << std::endl;
 		exit(0);
 	}
 	QTextStream fin(&file);
@@ -69,8 +69,8 @@ void TetMesh::LoadFacesFromFile(QString filename)
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		std::cout << "Cannot load nodes file." << std::endl;
-		exit(0);
+		std::cerr << "Cannot load nodes file." << std::endl;
+		exit(1);
 	}
 	QTextStream fin(&file);
 
@@ -129,7 +129,6 @@ void TetMesh::ComputeANs(int tetid)
 		// Note that cross product of two edges is twice the area of a face times the normal,
 		// So we can simply add one sixth of -sigma times the cross product to each of the three nodes.
 		m_ANs.col(tetid * 3 + i) = -(v1.cross(v2) + v2.cross(v3) + v3.cross(v1)) / 6.0;
-		std::cout << m_ANs.col(tetid*3+i)<<std::endl;
 	}
 }
 
