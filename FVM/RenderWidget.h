@@ -6,6 +6,7 @@
 #include "TetMesh.h"
 
 #include <iostream>
+#include <memory>
 
 class RenderWidget :
 	public QGLViewer

@@ -34,7 +34,15 @@ void TetMesh::LoadNodesFromFile(QString filename)
 		{
 			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
 		}
+
+
+		// mass will be loaded from outer file in later version, this is just for quick test
+		m_nodes_mass = Eigen::VectorXd::Ones(n_nodes) * 0.1;
+		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
+
 		//std::cout << m_nodes;
+
 	}
 }
 
@@ -129,6 +137,23 @@ void TetMesh::ComputeANs(int tetid)
 		// Note that cross product of two edges is twice the area of a face times the normal,
 		// So we can simply add one sixth of -sigma times the cross product to each of the three nodes.
 		m_ANs.col(tetid * 3 + i) = -(v1.cross(v2) + v2.cross(v3) + v3.cross(v1)) / 6.0;
+	}
+}
+
+void TetMesh::ComputeForces()
+{
+	m_nodes_forces = m_nodes_gravity;
+	Eigen::Matrix3d Ds;
+	Eigen::Matrix3d F;		// Ds * Dm_inverse
+	Eigen::Matrix3d G;      // Green Strain 1/2 * (F_tanspose * F - I)
+	Eigen::Matrix3d sigma;  // Cauch stress using isotropic linear elastic material
+	Eigen::Matrix3d P;      // First Piola-Kirchhoff stress
+	for (int i = 0; i < n_tets; ++i)
+	{
+		Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
+		Ds.col(1) = m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i));
+		Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
+		
 	}
 }
 

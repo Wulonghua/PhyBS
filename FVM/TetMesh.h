@@ -15,6 +15,8 @@ public:
 	void LoadTetsFromFile(QString filename);
 	void LoadFacesFromFile(QString filename);
 	void SetTetMaterial(double e, double nu);
+	void ComputeForces();
+
 
 
 private:
@@ -27,6 +29,12 @@ private:
 
 	Eigen::MatrixXd m_Dm_inverses;
 	Eigen::MatrixXd m_ANs;
+
+	Eigen::VectorXd m_nodes_mass;
+	Eigen::MatrixXd m_nodes_gravity;
+
+	Eigen::MatrixXd m_nodes_forces;
+
 
 	double m_E;
 	double m_nu;
