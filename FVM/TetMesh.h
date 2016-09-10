@@ -39,6 +39,8 @@ private:
 	double m_E;
 	double m_nu;
 
+	double m_Enu1, m_Enu2, m_Enu3;    
+
 	int n_nodes;
 	int n_tets;
 	int n_bound_faces;

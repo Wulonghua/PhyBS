@@ -3,7 +3,8 @@
 
 TetMesh::TetMesh()
 {
-	InitModel();
+	//InitModel();
+	std::cout << Eigen::Matrix3d::Identity();
 }
 
 
@@ -144,16 +145,35 @@ void TetMesh::ComputeForces()
 {
 	m_nodes_forces = m_nodes_gravity;
 	Eigen::Matrix3d Ds;
-	Eigen::Matrix3d F;		// Ds * Dm_inverse
-	Eigen::Matrix3d G;      // Green Strain 1/2 * (F_tanspose * F - I)
-	Eigen::Matrix3d sigma;  // Cauch stress using isotropic linear elastic material
-	Eigen::Matrix3d P;      // First Piola-Kirchhoff stress
+	Eigen::Matrix3d F;									// Ds * Dm_inverse
+	Eigen::Matrix3d G;									// Green Strain 1/2 * (F_tanspose * F - I)
+	Eigen::Matrix3d sigma = Eigen::Matrix3d::Zero();	// Cauch stress using isotropic linear elastic material
+	Eigen::Matrix3d P;									// First Piola-Kirchhoff stress
 	for (int i = 0; i < n_tets; ++i)
 	{
 		Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
 		Ds.col(1) = m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i));
 		Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
 		
+		F = Ds * m_Dm_inverses.block<3,3>(0,3*i);
+		G = (F.transpose()*F - Eigen::Matrix3d::Identity()) / 2.0;
+
+		sigma(0, 0) = G(0, 0) *m_Enu3 + G(1, 1)*m_Enu2 + G(2, 2)*m_Enu2;
+		sigma(1, 1) = G(0, 0) *m_Enu2 + G(1, 1)*m_Enu3 + G(2, 2)*m_Enu2;
+		sigma(2, 2) = G(0, 0) *m_Enu2 + G(1, 1)*m_Enu2 + G(2, 2)*m_Enu3;
+
+		sigma(1, 2) = sigma(2, 1) = G(1, 2) * m_Enu1;
+		sigma(0, 2) = sigma(2, 0) = G(0, 2) * m_Enu1;
+		sigma(0, 1) = sigma(1, 0) = G(0, 1) * m_Enu1;
+
+		// Cauchy stress to First Piola-Kirchhoff stress
+		P = F.determinant() * sigma * F.transpose().inverse();
+		// compute forces for node1, node2 and node3.  f4 = - (f1+f2+f3)
+		Eigen::Matrix3d inner_forces = P * m_ANs.block<3, 3>(0, 3 * i);     
+		m_nodes_forces.col(m_tets(1, i)) += inner_forces.col(0);
+		m_nodes_forces.col(m_tets(2, i)) += inner_forces.col(1);
+		m_nodes_forces.col(m_tets(3, i)) += inner_forces.col(2);
+		m_nodes_forces.col(m_tets(0, i)) -= (inner_forces.col(0)+inner_forces.col(1)+inner_forces.col(2));
 	}
 }
 
@@ -161,4 +181,8 @@ void TetMesh::SetTetMaterial(double e, double nu)
 {
 	m_E  = e;
 	m_nu = nu;
+
+	m_Enu1 = m_E / (1 + m_nu);
+	m_Enu2 = m_Enu1 * m_nu / (1- m_nu * 2);
+	m_Enu3 = m_Enu1 * (1 - m_nu) / (1 - m_nu * 2);
 }
