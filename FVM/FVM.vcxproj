@@ -92,6 +92,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RenderWidget.cpp" />
     <ClCompile Include="TetMesh.cpp" />
+    <ClCompile Include="TimeIntegration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="fvm.h">
@@ -121,6 +122,7 @@
     <ClInclude Include="GeneratedFiles\ui_fvm.h" />
     <ClInclude Include="RenderWidget.h" />
     <ClInclude Include="TetMesh.h" />
+    <ClInclude Include="TimeIntegration.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="fvm.qrc">

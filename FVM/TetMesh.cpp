@@ -30,6 +30,7 @@ void TetMesh::loadNodesFromFile(QString filename)
 		//load nodes' positions
 		int prefix;
 		m_nodes = Eigen::MatrixXd::Zero(3, n_nodes);
+
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
 			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
@@ -38,6 +39,7 @@ void TetMesh::loadNodesFromFile(QString filename)
 
 		// mass will be loaded from outer file in later version, this is just for quick test
 		m_nodes_mass = Eigen::VectorXd::Ones(n_nodes) * 0.1;
+		m_velocities = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
 
@@ -198,6 +200,12 @@ void TetMesh::computeBoundfaceNormals()
 	}
 }
 
+void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel)
+{
+	m_nodes = pos;
+	m_velocities = vel;
+}
+
 void TetMesh::drawTetBoundFace()
 {
 	computeBoundfaceNormals();
@@ -214,3 +222,4 @@ void TetMesh::drawTetBoundFace()
 		glEnd();
 	}
 }
+
