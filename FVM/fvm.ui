@@ -41,6 +41,23 @@
      <height>21</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionLoadConfig"/>
+   </widget>
+   <widget class="QMenu" name="menuSimulation">
+    <property name="title">
+     <string>Simulation</string>
+    </property>
+    <addaction name="actionStep"/>
+    <addaction name="actionRun"/>
+    <addaction name="actionPause"/>
+    <addaction name="actionStop"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuSimulation"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -49,8 +66,73 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+   <addaction name="actionLoadConfig"/>
+   <addaction name="actionStep"/>
+   <addaction name="actionRun"/>
+   <addaction name="actionPause"/>
+   <addaction name="actionStop"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionLoadConfig">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/load.png</normaloff>:/icon/icon/load.png</iconset>
+   </property>
+   <property name="text">
+    <string>LoadConfig</string>
+   </property>
+   <property name="toolTip">
+    <string>Load Model</string>
+   </property>
+  </action>
+  <action name="actionStep">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/do_step.png</normaloff>:/icon/icon/do_step.png</iconset>
+   </property>
+   <property name="text">
+    <string>Step</string>
+   </property>
+   <property name="toolTip">
+    <string>Simu one time step</string>
+   </property>
+  </action>
+  <action name="actionRun">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/run.png</normaloff>:/icon/icon/run.png</iconset>
+   </property>
+   <property name="text">
+    <string>Run</string>
+   </property>
+   <property name="toolTip">
+    <string>Start Simulation</string>
+   </property>
+  </action>
+  <action name="actionPause">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/pause.png</normaloff>:/icon/icon/pause.png</iconset>
+   </property>
+   <property name="text">
+    <string>Pause</string>
+   </property>
+   <property name="toolTip">
+    <string>Pause simulation</string>
+   </property>
+  </action>
+  <action name="actionStop">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/stop.png</normaloff>:/icon/icon/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Stop</string>
+   </property>
+   <property name="toolTip">
+    <string>Stop simulation</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>

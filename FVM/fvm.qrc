@@ -1,4 +1,10 @@
 <RCC>
-    <qresource prefix="FVM">
-    </qresource>
+  <qresource prefix="FVM"/>
+  <qresource prefix="icon">
+    <file>../icon/do_step.png</file>
+    <file>../icon/load.png</file>
+    <file>../icon/pause.png</file>
+    <file>../icon/run.png</file>
+    <file>../icon/stop.png</file>
+  </qresource>
 </RCC>
