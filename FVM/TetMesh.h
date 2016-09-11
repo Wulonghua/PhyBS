@@ -24,6 +24,8 @@ public:
 	Eigen::MatrixXd & getVelocities() { return m_velocities; }
 	Eigen::MatrixXd & getForces() { return m_nodes_forces; }
 	Eigen::VectorXd & getMasses() { return m_nodes_mass; }
+	int getNodesNum() { return n_nodes; }
+	int getTetsNum() { return n_tets; }
 private:
 	void initModel();
 	void computeANs(int tetid);

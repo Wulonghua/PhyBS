@@ -3,9 +3,12 @@
 FVM::FVM(QWidget *parent)
 	: QMainWindow(parent)
 {
-	m_tetMesh = std::make_shared<TetMesh>();
 	ui.setupUi(this);
+	m_tetMesh = std::make_shared<TetMesh>();
 	ui.glWidget->setGLTetMesh(m_tetMesh);
+	m_statusLabel = new QLabel(this);
+	m_statusLabel->setText(QStringLiteral(" #Nodes: 1% || #Tets: 2%").arg(m_tetMesh->getNodesNum()).arg(m_tetMesh->getTetsNum()));
+	ui.statusBar->addWidget(m_statusLabel);
 }
 
 FVM::~FVM()

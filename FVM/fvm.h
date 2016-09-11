@@ -3,6 +3,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include <qtimer.h>
+#include <qlabel.h>
 #include <memory>
 
 #include "ui_fvm.h"
@@ -32,6 +33,7 @@ private:
 	std::shared_ptr<TimeIntegration> m_integrator;
 
 	QTimer m_idleTimer;
+	QLabel *m_statusLabel;
 };
 
 #endif // FVM_H
