@@ -28,7 +28,7 @@
      <number>1</number>
     </property>
     <item row="0" column="0">
-     <widget class="RenderWidget" name="rWidget" native="true"/>
+     <widget class="RenderWidget" name="glWidget" native="true"/>
     </item>
    </layout>
   </widget>

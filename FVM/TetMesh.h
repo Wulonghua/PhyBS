@@ -1,31 +1,37 @@
 #pragma once
 
 #include "Eigen/Dense"
-#include <iostream>
-#include <qfile.h>
-#include <qstring.h>
-#include <qtextstream.h>
+#include "qfile.h"
+#include "qstring.h"
+#include "qtextstream.h"
+#include "qopengl.h"
 
+#include <iostream>
+
+class RenderWidget;
 class TetMesh
 {
 public:
 	TetMesh();
 	~TetMesh();
-	void LoadNodesFromFile(QString filename);
-	void LoadTetsFromFile(QString filename);
-	void LoadFacesFromFile(QString filename);
-	void SetTetMaterial(double e, double nu);
-	void ComputeForces();
-
-
+	void loadNodesFromFile(QString filename);
+	void loadTetsFromFile(QString filename);
+	void loadFacesFromFile(QString filename);
+	void setTetMaterial(double e, double nu);
+	void computeForces();
+	void drawTetBoundFace();
 
 private:
-	void InitModel();
-	void ComputeANs(int tetid);
+	void initModel();
+	void computeANs(int tetid);
+	void computeBoundfaceNormals();
 
 	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
 	Eigen::MatrixXi m_tets;				// tetrahedra's indices : 4*m matrix
+
 	Eigen::MatrixXi m_bound_faces;		// the surfaces' indices of tet-mesh's boundary.
+	Eigen::MatrixXd m_bound_normals;    // the surfaces' normals.
+
 
 	Eigen::MatrixXd m_Dm_inverses;
 	Eigen::MatrixXd m_ANs;
@@ -45,4 +51,3 @@ private:
 	int n_tets;
 	int n_bound_faces;
 };
-

@@ -26,6 +26,7 @@ void RenderWidget::init()
 	glEnable(GL_LIGHTING);
 	glDisable(GL_POINT_SMOOTH);
 
+
 	// Light setup
 	//glDisable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
@@ -46,10 +47,12 @@ void RenderWidget::init()
 void RenderWidget::draw()
 {
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	DrawTestCube();
+	glDisable(GL_LIGHT1);
+	//drawTestCube();
+	gl_tetmesh->drawTetBoundFace();
 }
 
-void RenderWidget::DrawTestCube()
+void RenderWidget::drawTestCube()
 {
 	// Place light at camera position
 	const qglviewer::Vec cameraPos = camera()->position();

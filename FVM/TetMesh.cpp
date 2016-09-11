@@ -1,18 +1,17 @@
 #include "TetMesh.h"
+#include "RenderWidget.h"
 
 
 TetMesh::TetMesh()
 {
-	//InitModel();
-	std::cout << Eigen::Matrix3d::Identity();
+	initModel();
 }
-
 
 TetMesh::~TetMesh()
 {
 }
 
-void TetMesh::LoadNodesFromFile(QString filename)
+void TetMesh::loadNodesFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -47,7 +46,7 @@ void TetMesh::LoadNodesFromFile(QString filename)
 	}
 }
 
-void TetMesh::LoadTetsFromFile(QString filename)
+void TetMesh::loadTetsFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -73,7 +72,7 @@ void TetMesh::LoadTetsFromFile(QString filename)
 	}
 }
 
-void TetMesh::LoadFacesFromFile(QString filename)
+void TetMesh::loadFacesFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -88,11 +87,12 @@ void TetMesh::LoadFacesFromFile(QString filename)
 		QString line = fin.readLine().simplified();
 		QStringList segs = line.split(" ");
 		n_bound_faces = segs[0].toInt();
+		m_bound_normals = Eigen::MatrixXd::Zero(3,n_bound_faces);
 
 		//load Tets' indices
 		int prefix;
 		m_bound_faces = Eigen::MatrixXi::Zero(3, n_bound_faces);
-		for (size_t i = 0; i < n_tets; ++i)
+		for (size_t i = 0; i < n_bound_faces; ++i)
 		{
 			fin >> prefix >> m_bound_faces(0,i) >> m_bound_faces(1,i) >> m_bound_faces(2,i);
 		}
@@ -100,11 +100,11 @@ void TetMesh::LoadFacesFromFile(QString filename)
 	}
 }
 
-void TetMesh::InitModel()
+void TetMesh::initModel()
 {
-	LoadNodesFromFile(QStringLiteral("..\\model\\box\\box.1.node"));
-	LoadTetsFromFile(QStringLiteral("..\\model\\box\\box.1.ele"));
-	LoadFacesFromFile(QStringLiteral("..\\model\\box\\box.1.face"));
+	loadNodesFromFile(QStringLiteral("..\\model\\box\\box.1.node"));
+	loadTetsFromFile(QStringLiteral("..\\model\\box\\box.1.ele"));
+	loadFacesFromFile(QStringLiteral("..\\model\\box\\box.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
@@ -118,13 +118,13 @@ void TetMesh::InitModel()
 		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
 		m_Dm_inverses.block<3,3>(0,i*3) = Dm.inverse();
 
-		ComputeANs(i);
+		computeANs(i);
 	}	
 
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 
-void TetMesh::ComputeANs(int tetid)
+void TetMesh::computeANs(int tetid)
 {
 	int edge[3][4] = {{1,0,2,3},{2,0,1,3},{3,0,1,2}};
 	Eigen::Vector3d v1, v2, v3;
@@ -141,7 +141,7 @@ void TetMesh::ComputeANs(int tetid)
 	}
 }
 
-void TetMesh::ComputeForces()
+void TetMesh::computeForces()
 {
 	m_nodes_forces = m_nodes_gravity;
 	Eigen::Matrix3d Ds;
@@ -177,7 +177,7 @@ void TetMesh::ComputeForces()
 	}
 }
 
-void TetMesh::SetTetMaterial(double e, double nu)
+void TetMesh::setTetMaterial(double e, double nu)
 {
 	m_E  = e;
 	m_nu = nu;
@@ -185,4 +185,32 @@ void TetMesh::SetTetMaterial(double e, double nu)
 	m_Enu1 = m_E / (1 + m_nu);
 	m_Enu2 = m_Enu1 * m_nu / (1- m_nu * 2);
 	m_Enu3 = m_Enu1 * (1 - m_nu) / (1 - m_nu * 2);
+}
+
+void TetMesh::computeBoundfaceNormals()
+{
+	Eigen::Vector3d v1, v2, v3;
+	for (int i = 0; i < n_bound_faces;++i)
+	{
+		v1 = m_nodes.col(m_bound_faces(1, i)) - m_nodes.col(m_bound_faces(0, i));
+		v2 = m_nodes.col(m_bound_faces(2, i)) - m_nodes.col(m_bound_faces(0, i));
+		m_bound_normals.col(i) = v2.cross(v1).normalized();
+	}
+}
+
+void TetMesh::drawTetBoundFace()
+{
+	computeBoundfaceNormals();
+
+	glColor3f(0.251, 0.424, 0.7);
+	for (int i = 0; i < n_bound_faces; ++i)
+	{
+		
+		glBegin(GL_TRIANGLES);
+		glNormal3dv(m_bound_normals.col(i).data());
+		glVertex3dv(m_nodes.col(m_bound_faces(0, i)).data());
+		glVertex3dv(m_nodes.col(m_bound_faces(1, i)).data());
+		glVertex3dv(m_nodes.col(m_bound_faces(2, i)).data());
+		glEnd();
+	}
 }

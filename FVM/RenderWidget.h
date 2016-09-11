@@ -5,6 +5,7 @@
 #include "qopenglcontext.h"
 #include "TetMesh.h"
 
+
 #include <iostream>
 #include <memory>
 
@@ -14,12 +15,16 @@ class RenderWidget :
 public:
 	RenderWidget(QWidget *parent);
 	virtual ~RenderWidget();
+
+	void setGLTetMesh(std::shared_ptr<TetMesh> tet) { gl_tetmesh = tet; }
+
 protected:
 	virtual void draw();
 	virtual void init();
+
 private:
 
-	void DrawTestCube();
+	void drawTestCube();
 
 	QOpenGLFunctions_4_5_Core *render;    // reserve for modern glsl rendering
 

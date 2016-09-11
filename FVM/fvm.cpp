@@ -3,8 +3,9 @@
 FVM::FVM(QWidget *parent)
 	: QMainWindow(parent)
 {
-	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
+	ui.setupUi(this);
+	ui.glWidget->setGLTetMesh(m_tetMesh);
 }
 
 FVM::~FVM()
