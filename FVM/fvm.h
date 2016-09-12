@@ -32,7 +32,7 @@ private:
 	std::shared_ptr<TetMesh> m_tetMesh;
 	std::shared_ptr<TimeIntegration> m_integrator;
 
-	QTimer m_idleTimer;
+	QTimer *m_idleTimer;
 	QLabel *m_statusLabel;
 };
 

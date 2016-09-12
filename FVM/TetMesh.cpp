@@ -204,6 +204,10 @@ void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::Ma
 {
 	m_nodes = pos;
 	m_velocities = vel;
+
+	//test with fixed node
+	m_nodes.col(8) = Eigen::Vector3d(0, 0.5, -0.5);
+	m_velocities.col(8) = Eigen::Vector3d::Zero();
 }
 
 void TetMesh::drawTetBoundFace()

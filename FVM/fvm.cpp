@@ -13,6 +13,9 @@ FVM::FVM(QWidget *parent)
 					.arg(m_tetMesh->getTetsNum())
 					.arg(m_integrator->getTimeStep()));
 	ui.statusBar->addWidget(m_statusLabel);
+
+	m_idleTimer = new QTimer(this);
+	initSignalSlotConnections();
 }
 
 FVM::~FVM()
@@ -27,6 +30,7 @@ void FVM::initSignalSlotConnections()
 	connect(ui.actionRun, SIGNAL(triggered()), this, SLOT(DoRun()));
 	connect(ui.actionPause, SIGNAL(triggered()), this, SLOT(DoPause()));
 	connect(ui.actionStop, SIGNAL(triggered()), this, SLOT(DoStop()));
+	connect(m_idleTimer,SIGNAL(timeout()),this, SLOT(DoOneStep()));
 }
 
 void FVM::DoLoadConfig()
@@ -36,21 +40,27 @@ void FVM::DoLoadConfig()
 
 void FVM::DoOneStep()
 {
-
+	m_tetMesh->computeForces();
+	m_integrator->simuExplicit(	m_tetMesh->getNodes(),
+								m_tetMesh->getVelocities(),
+								m_tetMesh->getForces(),
+								m_tetMesh->getMasses());
+	m_tetMesh->updateNodesVelocities(m_integrator->getPositions(), m_integrator->getVelocities());
 	ui.glWidget->update();
 }
 
 void FVM::DoRun()
 {
+	m_idleTimer->start(0);
 
 }
 
 void FVM::DoPause()
 {
-
+	
 }
 
 void FVM::DoStop()
 {
-
+	m_idleTimer->stop();
 }
