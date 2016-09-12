@@ -14,6 +14,7 @@ public:
 	void setTimeStep(double t) { m_t = t; }
 	Eigen::MatrixXd & getPositions() { return m_positions;}
 	Eigen::MatrixXd & getVelocities() { return m_velocities; }
+	double & getTimeStep() { return m_t; }
 private:
 	Eigen::MatrixXd m_positions;  // nodes' positions after one time step
 	Eigen::MatrixXd m_velocities; // nodes' velocities after one time step  

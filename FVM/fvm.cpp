@@ -5,9 +5,13 @@ FVM::FVM(QWidget *parent)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
+	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum());
 	ui.glWidget->setGLTetMesh(m_tetMesh);
 	m_statusLabel = new QLabel(this);
-	m_statusLabel->setText(QStringLiteral(" #Nodes: 1% || #Tets: 2%").arg(m_tetMesh->getNodesNum()).arg(m_tetMesh->getTetsNum()));
+	m_statusLabel->setText(QStringLiteral(" #Nodes: %1	#Tets: %2	Time step: %3s")
+					.arg(m_tetMesh->getNodesNum())
+					.arg(m_tetMesh->getTetsNum())
+					.arg(m_integrator->getTimeStep()));
 	ui.statusBar->addWidget(m_statusLabel);
 }
 
