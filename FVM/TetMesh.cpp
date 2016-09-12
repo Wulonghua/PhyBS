@@ -38,7 +38,7 @@ void TetMesh::loadNodesFromFile(QString filename)
 
 
 		// mass will be loaded from outer file in later version, this is just for quick test
-		m_nodes_mass = Eigen::VectorXd::Ones(n_nodes) * 0.1;
+		m_nodes_mass = Eigen::VectorXd::Ones(n_nodes) * 0.0001;
 		m_velocities = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
@@ -123,12 +123,13 @@ void TetMesh::initModel()
 		computeANs(i);
 	}	
 
+	setTetMaterial(1000000, 0.45);
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 
 void TetMesh::computeANs(int tetid)
 {
-	int edge[3][4] = {{1,0,2,3},{2,0,1,3},{3,0,1,2}};
+	int edge[3][4] = {{1,0,2,3},{2,0,3,1},{3,0,1,2}};
 	Eigen::Vector3d v1, v2, v3;
 	for (size_t i = 0; i < 3; ++i)
 	{
@@ -159,6 +160,9 @@ void TetMesh::computeForces()
 		
 		F = Ds * m_Dm_inverses.block<3,3>(0,3*i);
 		G = (F.transpose()*F - Eigen::Matrix3d::Identity()) / 2.0;
+		//C = (F.transpose() + F) / 2.0 - Eigen::Matrix3d::Identity();
+		//test
+		//std::cout << "green strain: " << G << std::endl;
 
 		sigma(0, 0) = G(0, 0) *m_Enu3 + G(1, 1)*m_Enu2 + G(2, 2)*m_Enu2;
 		sigma(1, 1) = G(0, 0) *m_Enu2 + G(1, 1)*m_Enu3 + G(2, 2)*m_Enu2;
@@ -170,13 +174,21 @@ void TetMesh::computeForces()
 
 		// Cauchy stress to First Piola-Kirchhoff stress
 		P = F.determinant() * sigma * F.transpose().inverse();
+
+		//test
+		//std::cout << "det(F): " << F.determinant() << std::endl;
+		//std::cout << " sigma: " << sigma<<std::endl;
+		//std::cout << "F-T: " << F.transpose().inverse() << std::endl;
+
 		// compute forces for node1, node2 and node3.  f4 = - (f1+f2+f3)
-		Eigen::Matrix3d inner_forces = P * m_ANs.block<3, 3>(0, 3 * i);     
+		Eigen::Matrix3d inner_forces = P * m_ANs.block<3, 3>(0, 3 * i);
+
 		m_nodes_forces.col(m_tets(1, i)) += inner_forces.col(0);
 		m_nodes_forces.col(m_tets(2, i)) += inner_forces.col(1);
 		m_nodes_forces.col(m_tets(3, i)) += inner_forces.col(2);
 		m_nodes_forces.col(m_tets(0, i)) -= (inner_forces.col(0)+inner_forces.col(1)+inner_forces.col(2));
 	}
+	//std::cout << "one iteration" << std::endl;
 }
 
 void TetMesh::setTetMaterial(double e, double nu)
@@ -205,9 +217,15 @@ void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::Ma
 	m_nodes = pos;
 	m_velocities = vel;
 
-	//test with fixed node
+	//cube test with fixed node 
 	m_nodes.col(8) = Eigen::Vector3d(0, 0.5, -0.5);
 	m_velocities.col(8) = Eigen::Vector3d::Zero();
+
+	// tet test with fixed node
+	//m_nodes.col(0) = Eigen::Vector3d(1.0, 1.0, 1.0);
+	//m_velocities.col(0) = Eigen::Vector3d::Zero();
+	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
+	//m_velocities.col(1) = Eigen::Vector3d::Zero();
 }
 
 void TetMesh::drawTetBoundFace()

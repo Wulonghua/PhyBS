@@ -34,6 +34,9 @@ private:
 
 	QTimer *m_idleTimer;
 	QLabel *m_statusLabel;
+
+	int m_iter;
+	int m_frameID;
 };
 
 #endif // FVM_H

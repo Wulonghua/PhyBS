@@ -1,7 +1,7 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent)
+	: QMainWindow(parent), m_iter(0), m_frameID(0)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -40,13 +40,22 @@ void FVM::DoLoadConfig()
 
 void FVM::DoOneStep()
 {
-	m_tetMesh->computeForces();
-	m_integrator->simuExplicit(	m_tetMesh->getNodes(),
-								m_tetMesh->getVelocities(),
-								m_tetMesh->getForces(),
-								m_tetMesh->getMasses());
-	m_tetMesh->updateNodesVelocities(m_integrator->getPositions(), m_integrator->getVelocities());
-	ui.glWidget->update();
+	if (m_iter++ < 10000)
+	{
+		m_tetMesh->computeForces();
+		m_integrator->simuExplicit(m_tetMesh->getNodes(),
+			m_tetMesh->getVelocities(),
+			m_tetMesh->getForces(),
+			m_tetMesh->getMasses());
+		m_tetMesh->updateNodesVelocities(m_integrator->getPositions(), m_integrator->getVelocities());
+		ui.glWidget->update();
+	}
+	else
+	{
+		m_iter = 0;
+		QString snap_file = QStringLiteral("snapshot_%1").arg(++m_frameID) + QStringLiteral(".png");
+		ui.glWidget->saveSnapshot(snap_file, true);
+	}
 }
 
 void FVM::DoRun()

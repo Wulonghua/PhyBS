@@ -1,7 +1,7 @@
 #include "TimeIntegration.h"
 
 
-TimeIntegration::TimeIntegration(int num_nodes) : m_t(0.001)
+TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
