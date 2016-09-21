@@ -89,6 +89,8 @@
     <ClCompile Include="GeneratedFiles\Release\moc_fvm.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="IsotropicMaterial.cpp" />
+    <ClCompile Include="IsotropicNeohookeanMaterial.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RenderWidget.cpp" />
     <ClCompile Include="TetMesh.cpp" />
@@ -120,6 +122,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_fvm.h" />
+    <ClInclude Include="IsotropicMaterial.h" />
+    <ClInclude Include="IsotropicNeohookeanMaterial.h" />
     <ClInclude Include="RenderWidget.h" />
     <ClInclude Include="TetMesh.h" />
     <ClInclude Include="TimeIntegration.h" />
