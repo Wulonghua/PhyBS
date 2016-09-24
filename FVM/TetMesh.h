@@ -26,6 +26,9 @@ public:
 	Eigen::VectorXd & getMasses() { return m_nodes_mass; }
 	int getNodesNum() { return n_nodes; }
 	int getTetsNum() { return n_tets; }
+	double getE() { return m_E; }
+	double getNu() { return m_nu; }
+
 private:
 	void initModel();
 	void computeANs(int tetid);
