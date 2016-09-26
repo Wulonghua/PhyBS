@@ -30,6 +30,7 @@ void FVM::initSignalSlotConnections()
 	connect(ui.actionRun, SIGNAL(triggered()), this, SLOT(DoRun()));
 	connect(ui.actionPause, SIGNAL(triggered()), this, SLOT(DoPause()));
 	connect(ui.actionStop, SIGNAL(triggered()), this, SLOT(DoStop()));
+	connect(ui.actionTest, SIGNAL(triggered()), this, SLOT(DoTest()));
 	connect(m_idleTimer,SIGNAL(timeout()),this, SLOT(DoOneStep()));
 }
 
@@ -72,4 +73,9 @@ void FVM::DoPause()
 void FVM::DoStop()
 {
 	m_idleTimer->stop();
+}
+
+void FVM::DoTest()
+{
+	
 }

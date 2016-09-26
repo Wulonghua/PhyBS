@@ -24,6 +24,7 @@ public slots:
 	void DoPause();
 	void DoLoadConfig();
 	void DoStop();
+	void DoTest();
 
 private:
 	void initSignalSlotConnections();

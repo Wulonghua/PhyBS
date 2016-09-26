@@ -71,6 +71,8 @@
    <addaction name="actionRun"/>
    <addaction name="actionPause"/>
    <addaction name="actionStop"/>
+   <addaction name="separator"/>
+   <addaction name="actionTest"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionLoadConfig">
@@ -131,6 +133,18 @@
    </property>
    <property name="toolTip">
     <string>Stop simulation</string>
+   </property>
+  </action>
+  <action name="actionTest">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/test.png</normaloff>:/icon/icon/test.png</iconset>
+   </property>
+   <property name="text">
+    <string>Test</string>
+   </property>
+   <property name="toolTip">
+    <string>test</string>
    </property>
   </action>
  </widget>
