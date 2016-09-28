@@ -17,7 +17,10 @@ public:
 	void loadTetsFromFile(QString filename);
 	void loadFacesFromFile(QString filename);
 	void setTetMaterial(double e, double nu);
+
+	// using the simplest linear isotropic model
 	void computeForces();
+
 	void drawTetBoundFace();
 	void updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel);
 	Eigen::MatrixXd & getNodes() { return m_nodes; }
@@ -54,7 +57,7 @@ private:
 	double m_E;
 	double m_nu;
 
-	double m_Enu1, m_Enu2, m_Enu3;    
+	double m_Enu1, m_Enu2, m_Enu3;    // for linear 
 
 	int n_nodes;
 	int n_tets;

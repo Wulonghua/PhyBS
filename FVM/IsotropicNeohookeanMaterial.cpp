@@ -13,7 +13,8 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 	//currently only homogeneous material is used. 
 	std::fill(m_mus.begin(),m_mus.end(),mu);
 	std::fill(m_lambdas.begin(), m_lambdas.end(), lambda);
-	
+
+	m_tetModel = tetMesh;
 }
 
 
@@ -37,4 +38,9 @@ Eigen::Matrix3d IsotropicNeohookeanMaterial::computeEnergy2InvariantsHessian(int
 	hessian(2, 2) = 0.5 * m_mus[tetID] * invI3sq + 0.25 * m_lambdas[tetID] * invI3sq * (1 - std::log(invariants(2)));
 
 	return hessian;
+}
+
+Eigen::MatrixXd IsotropicNeohookeanMaterial::computePDP2PDF(int tetID)
+{
+
 }
