@@ -42,5 +42,5 @@ Eigen::Matrix3d IsotropicNeohookeanMaterial::computeEnergy2InvariantsHessian(int
 
 Eigen::MatrixXd IsotropicNeohookeanMaterial::computePDP2PDF(int tetID)
 {
-
+	return Eigen::Matrix3d::Zero();
 }
