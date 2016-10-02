@@ -10,12 +10,12 @@ IsotropicMaterial::~IsotropicMaterial()
 {
 }
 
+/**********see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.********/
 void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d &S, Eigen::Matrix3d &U, Eigen::Matrix3d &V)
 {
 	Eigen::JacobiSVD<Eigen::Matrix3d> svd(F, Eigen::ComputeThinU | Eigen::ComputeThinV);
 	S = svd.singularValues();
 	V = svd.matrixV();
-
 
 	// Fix V if determinant of V is equal to -1
 	if (V.determinant() < 0) // ==-1
@@ -52,5 +52,30 @@ void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d 
 	{
 		U.col(2) = U.col(2) * (-1);
 		S(2) *= -1;
+	}
+}
+
+void IsotropicMaterial::computeFhatsInvariants()
+{
+	int n = m_tetModel->getTetsNum();
+	Eigen::Matrix3d F, U, V;
+	Eigen::Vector3d Fhat;
+	double sigma1sq, sigma2sq, sigma3sq;
+	
+	for (int i = 0; i < n; ++i)
+	{
+		F = m_tetModel->computeDeformationGradient(i);
+		computeSVD33modified(F, Fhat, U, V);
+		m_Fhats.col(i) = Fhat;
+		m_Us.block<3, 3>(0, i * 3) = U;
+		m_Vs.block<3, 3>(0, i * 3) = V;
+
+		sigma1sq = Fhat(0)*Fhat(0);
+		sigma2sq = Fhat(1)*Fhat(1);
+		sigma3sq = Fhat(2)*Fhat(2);
+
+		m_Invariants(0, i) = sigma1sq + sigma2sq + sigma3sq;
+		m_Invariants(1, i) = sigma1sq * sigma1sq + sigma2sq * sigma2sq + sigma3sq * sigma3sq;
+		m_Invariants(2, i) = sigma1sq * sigma2sq * sigma3sq;
 	}
 }

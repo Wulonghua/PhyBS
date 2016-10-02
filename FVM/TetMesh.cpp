@@ -43,6 +43,7 @@ void TetMesh::loadNodesFromFile(QString filename)
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
 
+		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
 		//std::cout << m_nodes;
 
 	}
@@ -143,6 +144,17 @@ void TetMesh::computeANs(int tetid)
 		m_ANs.col(tetid * 3 + i) = -(v1.cross(v2) + v2.cross(v3) + v3.cross(v1)) / 6.0;
 	}
 }
+
+Eigen::Matrix3d TetMesh::computeDeformationGradient(int i) // i is tet's index
+{
+	Eigen::Matrix3d Ds;
+	Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
+	Ds.col(1) = m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i));
+	Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
+
+	return Ds * m_Dm_inverses.block<3, 3>(0, 3 * i);
+}
+
 
 void TetMesh::computeForces()
 {

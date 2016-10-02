@@ -15,6 +15,7 @@ public:
 	virtual Eigen::Matrix3d computeEnergy2InvariantsHessian(int tetID, Eigen::Vector3d invariants);
 	// compute dP/dF
 	Eigen::MatrixXd computePDP2PDF(int tetID);
+	void computeInnerForcesfromFhats();
 
 };
 

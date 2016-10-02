@@ -20,9 +20,12 @@ public:
 
 	// using the simplest linear isotropic model
 	void computeForces();
+	Eigen::Matrix3d computeDeformationGradient(int tetID);
 
 	void drawTetBoundFace();
 	void updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel);
+
+	// The following are inline functions
 	Eigen::MatrixXd & getNodes() { return m_nodes; }
 	Eigen::MatrixXd & getVelocities() { return m_velocities; }
 	Eigen::MatrixXd & getForces() { return m_nodes_forces; }
@@ -31,6 +34,11 @@ public:
 	int getTetsNum() { return n_tets; }
 	double getE() { return m_E; }
 	double getNu() { return m_nu; }
+	Eigen::MatrixXd getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
+	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
+
+	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}
+	void addNodeForce(int nodeID, Eigen::Vector3d const &force) { m_nodes_forces.col(nodeID) += force; }
 
 private:
 	void initModel();
