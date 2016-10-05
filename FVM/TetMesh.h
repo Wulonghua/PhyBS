@@ -34,7 +34,8 @@ public:
 	int getTetsNum() { return n_tets; }
 	double getE() { return m_E; }
 	double getNu() { return m_nu; }
-	Eigen::MatrixXd getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
+	Eigen::Matrix3d getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
+	Eigen::Matrix3d getDmInv(int tetID) { return m_tets.block<3, 3>(0, 3 * tetID); }
 	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
 
 	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}

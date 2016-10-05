@@ -156,9 +156,30 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 			dPdFij_middle = Eigen::Matrix3d::Zero();
 		}
 	}
-
-
 	return dPdF;
+}
+
+Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
+{
+	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
+	Eigen::MatrixXd dGdF(9, 9);
+	dGdF.block<3, 9>(0, 0) = BT * dPdF.block<3, 9>(0, 0);
+	dGdF.block<3, 9>(3, 0) = BT * dPdF.block<3, 9>(3, 0);
+	dGdF.block<3, 9>(6, 0) = BT * dPdF.block<3, 9>(6, 0);
+
+
+	Eigen::Matrix3d DmInvT = m_tetModel->getDmInv(tetID).transpose();
+	Eigen::Vector3d v = -1.0 * DmInvT.rowwise().sum();
+
+	Eigen::MatrixXd dFdx = Eigen::MatrixXd::Zero(9, 9);
+	dFdx.block<3, 1>(0, 0) = dFdx.block<3, 1>(3, 1) = dFdx.block<3, 1>(6, 2) = v;
+	dFdx.block<3, 1>(0, 3) = dFdx.block<3, 1>(3, 4) = dFdx.block<3, 1>(6, 5) = DmInvT.col(0);
+	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
+	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
+
+	Eigen::MatrixXd dGdx = dGdF *dFdx;
+
 }
 
 Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::Vector3d v)
