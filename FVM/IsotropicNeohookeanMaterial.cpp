@@ -81,8 +81,96 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 	}
 }
 
-Eigen::MatrixXd IsotropicNeohookeanMaterial::computePDP2PDF(int tetID)
+Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 {
+	// first compute dP/dF at Fhat. See[Teran 05] Section 8
+	Eigen::MatrixXd dPdFatFhat = Eigen::MatrixXd::Zero(9, 9);
+	double invariantIII = m_Invariants(2, tetID);
+	Eigen::Vector3d gradient = computeEnergy2InvariantsGradient(tetID, m_Invariants.col(tetID));
+	double hessianIIIsq = computeEnergy2InvariantsHessian(tetID, m_Invariants.col(tetID))(2, 2);
+	double sigma11 = m_Fhats(0, tetID) * m_Fhats(0, tetID);
+	double sigma12 = m_Fhats(0, tetID) * m_Fhats(1, tetID);
+	double sigma13 = m_Fhats(0, tetID) * m_Fhats(2, tetID);
+	double sigma22 = m_Fhats(1, tetID) * m_Fhats(1, tetID);
+	double sigma23 = m_Fhats(1, tetID) * m_Fhats(2, tetID);
+	double sigma33 = m_Fhats(2, tetID) * m_Fhats(2, tetID);
+	double alpha = 2.0 * gradient(0);
+	double beta = -2.0 * invariantIII * gradient(2);
+	double gamma = 4.0 * invariantIII * (invariantIII*hessianIIIsq + gradient(2));
+	
+	Eigen::Matrix3d A;
+	Eigen::Matrix2d B12, B13, B23;
+	A(0, 0) = alpha + (beta + gamma) / sigma11;
+	A(0, 1) = A(1, 0) = gamma / sigma12;
+	A(0, 2) = A(2, 0) = gamma / sigma13;
+	A(1, 1) = alpha + (beta + gamma) / sigma22;
+	A(1, 2) = A(2, 1) = gamma / sigma23;
+	A(2, 2) = alpha + (beta + gamma) / sigma33;
 
-	return Eigen::Matrix3d::Zero();
+	B12(0, 0) = B12(1, 1) = alpha;
+	B12(0, 1) = B12(1, 0) = beta / sigma12;
+
+	B13(0, 0) = B13(1, 1) = alpha;
+	B13(0, 1) = B13(1, 0) = beta / sigma13;
+
+	B23(0, 0) = B23(1, 1) = alpha;
+	B23(0, 1) = B23(1, 0) = beta / sigma23;
+
+	dPdFatFhat.block<3, 3>(0, 0) = A;
+	dPdFatFhat.block<2, 2>(3, 3) = B12;
+	dPdFatFhat.block<2, 2>(5, 5) = B13;
+	dPdFatFhat.block<2, 2>(7, 7) = B23;
+
+	// Then compute dP/dF using [Teran 05] equation (2)
+	Eigen::MatrixXd dPdF = Eigen::MatrixXd::Zero(9, 9);
+	Eigen::Matrix3d eij = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d dPdFij = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d dPdFij_middle = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d dPdFij_t = Eigen::Matrix3d::Zero();
+	Eigen::Matrix3d U = m_Us.block<3, 3>(0, 3 * tetID);
+	Eigen::Matrix3d V = m_Vs.block<3, 3>(0, 3 * tetID);
+	Eigen::Matrix3d UT = U.transpose();
+	Eigen::Matrix3d VT = V.transpose();
+	Eigen::Matrix3d UTeijV;
+	Eigen::Matrix3d subTensor;
+
+	for (int fi = 0; fi < 3; ++fi)
+	{
+		for (int fj = 0; fj < 3; ++fj)
+		{
+			eij(fi, fj) = 1;
+			UTeijV = UT*eij*V;
+			for (int i = 0; i < 3; ++i)
+			{
+				for (int j = 0; j < 3; ++j)
+				{
+					subTensor = restoreMatrix33fromTeranVector(dPdFatFhat.row(i * 3 + j));
+					dPdFij_middle += UTeijV(i,j) * subTensor;
+				}
+			}
+			dPdFij = U * dPdFij_middle * VT;
+			dPdFij_t = dPdFij.transpose();
+			for (int r = 0; r < 9; ++r)
+				dPdF(r, fi * 3 + fj) = dPdFij_t.data()[r];
+			eij(fi, fj) = 0;
+			dPdFij_middle = Eigen::Matrix3d::Zero();
+		}
+	}
+
+
+	return dPdF;
+}
+
+Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::Vector3d v)
+{
+	Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
+	double matrix33fromTeran[9] = { 0, 3, 5, 4, 1, 7, 6, 8, 2 };
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
+		{
+			mat(i, j) = v(i * 3 + j);
+		}
+	}
+	return mat;
 }
