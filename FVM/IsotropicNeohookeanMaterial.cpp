@@ -19,6 +19,8 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 	std::fill(m_lambdas.begin(), m_lambdas.end(), lambda);
 
 	m_tetModel = tetMesh;
+
+	std::cout << "Isotrpic Neo-hookean Material initialized."
 }
 
 
@@ -178,8 +180,13 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
 	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
 
-	Eigen::MatrixXd dGdx = dGdF *dFdx;
+	Eigen::MatrixXd dGdx(9, 12);
+	dGdx.block<9,9>(3,0)= dGdF *dFdx;
+	dGdx.row(0) = -dGdx.row(3) - dGdx.row(6) - dGdx.row(9);
+	dGdx.row(1) = -dGdx.row(4) - dGdx.row(7) - dGdx.row(10);
+	dGdx.row(2) = -dGdx.row(5) - dGdx.row(8) - dGdx.row(11);
 
+	return dGdx;
 }
 
 Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::Vector3d v)

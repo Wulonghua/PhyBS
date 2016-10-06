@@ -7,6 +7,8 @@ FVM::FVM(QWidget *parent)
 	m_tetMesh = std::make_shared<TetMesh>();
 	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum());
 	ui.glWidget->setGLTetMesh(m_tetMesh);
+	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
+
 	m_statusLabel = new QLabel(this);
 	m_statusLabel->setText(QStringLiteral(" #Nodes: %1	#Tets: %2	Time step: %3s")
 					.arg(m_tetMesh->getNodesNum())

@@ -9,6 +9,8 @@
 #include "ui_fvm.h"
 #include "TetMesh.h"
 #include "TimeIntegration.h"
+#include "IsotropicMaterial.h"
+#include "IsotropicNeohookeanMaterial.h"
 
 class FVM : public QMainWindow
 {
@@ -32,6 +34,7 @@ private:
 	Ui::FVMClass ui;
 	std::shared_ptr<TetMesh> m_tetMesh;
 	std::shared_ptr<TimeIntegration> m_integrator;
+	std::shared_ptr<IsotropicMaterial> m_IsoMaterial;
 
 	QTimer *m_idleTimer;
 	QLabel *m_statusLabel;
