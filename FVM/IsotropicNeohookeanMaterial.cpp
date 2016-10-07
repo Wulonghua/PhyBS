@@ -166,16 +166,12 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 {
 	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
 
-	std::cout << dPdF << std::endl;
-
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
 	Eigen::MatrixXd dGdF(9, 9);
 	dGdF.block<3, 9>(0, 0) = BT * dPdF.block<3, 9>(0, 0);
 	dGdF.block<3, 9>(3, 0) = BT * dPdF.block<3, 9>(3, 0);
 	dGdF.block<3, 9>(6, 0) = BT * dPdF.block<3, 9>(6, 0);
 
-	std::cout << std::endl;
-	std::cout << dGdF << std::endl;
 
 	Eigen::Matrix3d DmInvT = m_tetModel->getDmInv(tetID).transpose();
 	Eigen::Vector3d v = -1.0 * DmInvT.rowwise().sum();
@@ -186,13 +182,30 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
 	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
 
-	Eigen::MatrixXd dGdx(12, 12);
-	dGdx.block<9,12>(3,0)= dGdF *dFdx;
-	dGdx.row(0) = -dGdx.row(3) - dGdx.row(6) - dGdx.row(9);
-	dGdx.row(1) = -dGdx.row(4) - dGdx.row(7) - dGdx.row(10);
-	dGdx.row(2) = -dGdx.row(5) - dGdx.row(8) - dGdx.row(11);
 	
-	m_tetModel->writeMatrix("mat.txt", dGdx);
+
+	//Eigen::MatrixXd dGdx(12, 12);
+	//dGdx.block<9,12>(3,0)= dGdF *dFdx;
+
+	Eigen::MatrixXd dGdx = dGdF * dFdx;
+
+	Eigen::MatrixXd dfdx = Eigen::MatrixXd::Zero(12, 12);
+
+	dfdx.row(0) = -dGdx.row(0) - dGdx.row(1) - dGdx.row(2);
+	dfdx.row(1) = -dGdx.row(3) - dGdx.row(4) - dGdx.row(5);
+	dfdx.row(2) = -dGdx.row(6) - dGdx.row(7) - dGdx.row(8);
+	
+	int convert_idx[9] = {0,3,6,1,4,7,2,5,8};
+	for (int i = 0; i < 9; ++i)
+	{
+		dfdx.row(i + 3) = dGdx.row(convert_idx[i]);
+	}
+
+	//dGdx.row(0) = -dGdx.row(3) - dGdx.row(6) - dGdx.row(9);
+	//dGdx.row(1) = -dGdx.row(4) - dGdx.row(7) - dGdx.row(10);
+	//dGdx.row(2) = -dGdx.row(5) - dGdx.row(8) - dGdx.row(11);
+	
+	m_tetModel->writeMatrix("mat.txt", dfdx);
 
 	return dGdx;
 
