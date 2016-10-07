@@ -41,6 +41,9 @@ public:
 	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}
 	void addNodeForce(int nodeID, Eigen::Vector3d const &force) { m_nodes_forces.col(nodeID) += force; }
 
+	// for test
+	void writeMatrix(QString file, Eigen::MatrixXd mat);
+
 private:
 	void initModel();
 	void computeANs(int tetid);

@@ -257,3 +257,19 @@ void TetMesh::drawTetBoundFace()
 	}
 }
 
+void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
+{
+	QFile file(filename);
+	if (file.open(QIODevice::ReadWrite)) {
+		QTextStream stream(&file);
+		int row = mat.rows();
+		int col = mat.cols();
+
+		for (int i = 0; i < row; ++i){
+			for (int j = 0; j < col; ++j){
+				stream << mat(i, j) << "\t";
+			}
+			stream << endl;
+		}
+	}
+}

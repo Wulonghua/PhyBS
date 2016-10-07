@@ -21,7 +21,7 @@ public:
 	void computeInnerForcesfromFhats();
 
 private:
-	Eigen::Matrix3d restoreMatrix33fromTeranVector(Eigen::Vector3d v);
+	Eigen::Matrix3d restoreMatrix33fromTeranVector(Eigen::VectorXd v);
 
 };
 

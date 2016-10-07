@@ -34,7 +34,7 @@ private:
 	Ui::FVMClass ui;
 	std::shared_ptr<TetMesh> m_tetMesh;
 	std::shared_ptr<TimeIntegration> m_integrator;
-	std::shared_ptr<IsotropicMaterial> m_IsoMaterial;
+	std::shared_ptr<IsotropicNeohookeanMaterial> m_IsoMaterial;
 
 	QTimer *m_idleTimer;
 	QLabel *m_statusLabel;

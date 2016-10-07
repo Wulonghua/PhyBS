@@ -13,7 +13,7 @@ IsotropicMaterial::~IsotropicMaterial()
 /**********see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.********/
 void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d &S, Eigen::Matrix3d &U, Eigen::Matrix3d &V)
 {
-	Eigen::JacobiSVD<Eigen::Matrix3d> svd(F, Eigen::ComputeThinU | Eigen::ComputeThinV);
+	Eigen::JacobiSVD<Eigen::Matrix3d> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	S = svd.singularValues();
 	V = svd.matrixV();
 

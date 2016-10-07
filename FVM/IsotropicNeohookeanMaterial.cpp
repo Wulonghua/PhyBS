@@ -20,7 +20,7 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 
 	m_tetModel = tetMesh;
 
-	std::cout << "Isotrpic Neo-hookean Material initialized."
+	std::cout << "Isotrpic Neo-hookean Material initialized."<<std::endl;
 }
 
 
@@ -50,8 +50,8 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 {
 	computeFhatsInvariants();
 	int n = m_tetModel->getTetsNum();
-	Eigen::Vector3d Phat,Fhat,F_inverseT;
-	double mu, lambda, J;
+	Eigen::Vector3d Phat,Fhat,Fhat_inverseT;
+	double mu, lambda, I3;
 	Eigen::Matrix3d P,U,V,forces;
 
 	for (int i = 0; i < n; ++i)
@@ -59,11 +59,11 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 		// compute First Piola-Kirchhoff stress based on diagonalized F.
 		// Use the equation from SIGGRAPH course note[Sifaki 2012] Page 24
 		Fhat = m_Fhats.col(i);
-		F_inverseT = Fhat.cwiseInverse();
+		Fhat_inverseT = Fhat.cwiseInverse();
 		mu = m_mus[i];
 		lambda = m_lambdas[i];
-		J = std::sqrt(m_Invariants(2, i));
-		Phat = mu * (Fhat - mu * F_inverseT) + lambda * std::log(J) * F_inverseT;
+		I3 = m_Invariants(2, i);
+		Phat = mu * (Fhat - Fhat_inverseT) + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
 		
 		// equation 1 in [Teran 04] P = U * Fhat * V^T
 		U = m_Us.block<3, 3>(0, 3 * i);
@@ -75,11 +75,10 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 
 		forces = P * m_tetModel->getAN(i);
 
-		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(1));
-		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(2));
-		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(3));
-		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0),
-								 -(forces.col(0) + forces.col(1) + forces.col(2)));	
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 	}
 }
 
@@ -123,6 +122,8 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 	dPdFatFhat.block<2, 2>(5, 5) = B13;
 	dPdFatFhat.block<2, 2>(7, 7) = B23;
 
+	//std::cout << dPdFatFhat << std::endl;
+
 	// Then compute dP/dF using [Teran 05] equation (2)
 	Eigen::MatrixXd dPdF = Eigen::MatrixXd::Zero(9, 9);
 	Eigen::Matrix3d eij = Eigen::Matrix3d::Zero();
@@ -164,32 +165,40 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 {
 	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+
+	std::cout << dPdF << std::endl;
+
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
 	Eigen::MatrixXd dGdF(9, 9);
 	dGdF.block<3, 9>(0, 0) = BT * dPdF.block<3, 9>(0, 0);
 	dGdF.block<3, 9>(3, 0) = BT * dPdF.block<3, 9>(3, 0);
 	dGdF.block<3, 9>(6, 0) = BT * dPdF.block<3, 9>(6, 0);
 
+	std::cout << std::endl;
+	std::cout << dGdF << std::endl;
 
 	Eigen::Matrix3d DmInvT = m_tetModel->getDmInv(tetID).transpose();
 	Eigen::Vector3d v = -1.0 * DmInvT.rowwise().sum();
 
-	Eigen::MatrixXd dFdx = Eigen::MatrixXd::Zero(9, 9);
+	Eigen::MatrixXd dFdx = Eigen::MatrixXd::Zero(9, 12);
 	dFdx.block<3, 1>(0, 0) = dFdx.block<3, 1>(3, 1) = dFdx.block<3, 1>(6, 2) = v;
 	dFdx.block<3, 1>(0, 3) = dFdx.block<3, 1>(3, 4) = dFdx.block<3, 1>(6, 5) = DmInvT.col(0);
 	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
 	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
 
-	Eigen::MatrixXd dGdx(9, 12);
-	dGdx.block<9,9>(3,0)= dGdF *dFdx;
+	Eigen::MatrixXd dGdx(12, 12);
+	dGdx.block<9,12>(3,0)= dGdF *dFdx;
 	dGdx.row(0) = -dGdx.row(3) - dGdx.row(6) - dGdx.row(9);
 	dGdx.row(1) = -dGdx.row(4) - dGdx.row(7) - dGdx.row(10);
 	dGdx.row(2) = -dGdx.row(5) - dGdx.row(8) - dGdx.row(11);
+	
+	m_tetModel->writeMatrix("mat.txt", dGdx);
 
 	return dGdx;
+
 }
 
-Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::Vector3d v)
+Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::VectorXd v)
 {
 	Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
 	double matrix33fromTeran[9] = { 0, 3, 5, 4, 1, 7, 6, 8, 2 };
@@ -197,7 +206,7 @@ Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eige
 	{
 		for (int j = 0; j < 3; ++j)
 		{
-			mat(i, j) = v(i * 3 + j);
+			mat(i, j) = v(matrix33fromTeran[i * 3 + j]);
 		}
 	}
 	return mat;

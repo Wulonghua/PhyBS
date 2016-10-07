@@ -79,6 +79,7 @@ void FVM::DoStop()
 
 void FVM::DoTest()
 {
-	Eigen::Vector3d tmp(1, 3, 5);
-	std::cout<<tmp.unitOrthogonal()<<std::endl;
+	m_IsoMaterial->computeInnerForcesfromFhats();
+	auto m = m_IsoMaterial->computeStiffnessMatrix(0);
+	std::cout << m;
 }
