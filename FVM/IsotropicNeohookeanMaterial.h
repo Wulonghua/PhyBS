@@ -3,6 +3,7 @@
 #include <Eigen\Dense>
 #include <algorithm>
 #include <cmath>
+#include <array>
 
 class IsotropicNeohookeanMaterial :
 	public IsotropicMaterial
@@ -22,6 +23,6 @@ public:
 
 private:
 	Eigen::Matrix3d restoreMatrix33fromTeranVector(Eigen::VectorXd v);
-
+	const std::array<int,9> m_matrix33fromTeran; // transfer teran's order to 3*3 matrix row major
 };
 

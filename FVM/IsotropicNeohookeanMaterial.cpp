@@ -2,6 +2,7 @@
 
 
 IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh> tetMesh)
+	:m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
 	int n_tets = tetMesh->getTetsNum();
 	m_mus.resize(n_tets);
@@ -19,7 +20,6 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 	std::fill(m_lambdas.begin(), m_lambdas.end(), lambda);
 
 	m_tetModel = tetMesh;
-
 	std::cout << "Isotrpic Neo-hookean Material initialized."<<std::endl;
 }
 
@@ -147,7 +147,7 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 			{
 				for (int j = 0; j < 3; ++j)
 				{
-					subTensor = restoreMatrix33fromTeranVector(dPdFatFhat.row(i * 3 + j));
+					subTensor = restoreMatrix33fromTeranVector(dPdFatFhat.row(m_matrix33fromTeran[i * 3 + j]));
 					dPdFij_middle += UTeijV(i,j) * subTensor;
 				}
 			}
@@ -182,11 +182,6 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
 	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
 
-	
-
-	//Eigen::MatrixXd dGdx(12, 12);
-	//dGdx.block<9,12>(3,0)= dGdF *dFdx;
-
 	Eigen::MatrixXd dGdx = dGdF * dFdx;
 
 	Eigen::MatrixXd dfdx = Eigen::MatrixXd::Zero(12, 12);
@@ -201,25 +196,21 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 		dfdx.row(i + 3) = dGdx.row(convert_idx[i]);
 	}
 
-	//dGdx.row(0) = -dGdx.row(3) - dGdx.row(6) - dGdx.row(9);
-	//dGdx.row(1) = -dGdx.row(4) - dGdx.row(7) - dGdx.row(10);
-	//dGdx.row(2) = -dGdx.row(5) - dGdx.row(8) - dGdx.row(11);
-	
-	m_tetModel->writeMatrix("mat.txt", dfdx);
+	// test
+	//m_tetModel->writeMatrix("mat.txt", dfdx);
 
-	return dGdx;
+	return dfdx;
 
 }
 
 Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::VectorXd v)
 {
 	Eigen::Matrix3d mat = Eigen::Matrix3d::Zero();
-	double matrix33fromTeran[9] = { 0, 3, 5, 4, 1, 7, 6, 8, 2 };
 	for (int i = 0; i < 3; ++i)
 	{
 		for (int j = 0; j < 3; ++j)
 		{
-			mat(i, j) = v(matrix33fromTeran[i * 3 + j]);
+			mat(i, j) = v(m_matrix33fromTeran[i * 3 + j]);
 		}
 	}
 	return mat;
