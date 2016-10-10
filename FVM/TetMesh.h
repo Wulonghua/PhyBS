@@ -16,7 +16,7 @@ public:
 	void loadNodesFromFile(QString filename);
 	void loadTetsFromFile(QString filename);
 	void loadFacesFromFile(QString filename);
-	void setTetMaterial(double e, double nu);
+	void setTetMaterial(double e, double nu, double den);
 
 	// using the simplest linear isotropic model
 	void computeForces();
@@ -50,6 +50,7 @@ private:
 	void computeBoundfaceNormals();
 
 	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
+	Eigen::MatrixXd m_rest_positions;	// nodes' restposition	: 3*n matrix
 	Eigen::MatrixXd m_velocities;		// nodes' velocities    : 3*n matrix
 	Eigen::MatrixXi m_tets;				// tetrahedra's indices : 4*m matrix
 
@@ -60,12 +61,13 @@ private:
 	Eigen::MatrixXd m_Dm_inverses;
 	Eigen::MatrixXd m_ANs;
 
-	Eigen::VectorXd m_nodes_mass;
+	Eigen::VectorXd m_nodes_mass;		// nodes 
 	Eigen::MatrixXd m_nodes_gravity;
 
 	Eigen::MatrixXd m_nodes_forces;
 
 
+	double m_density;
 	double m_E;
 	double m_nu;
 

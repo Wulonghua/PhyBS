@@ -165,6 +165,7 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
 Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 {
 	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+	//m_tetModel->writeMatrix("dPdF.csv", dPdF);
 
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
 	Eigen::MatrixXd dGdF(9, 9);
@@ -197,7 +198,7 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	}
 
 	// test
-	//m_tetModel->writeMatrix("mat.txt", dfdx);
+	//m_tetModel->writeMatrix("mat.csv", dfdx);
 
 	return dfdx;
 

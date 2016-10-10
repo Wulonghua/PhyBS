@@ -36,13 +36,12 @@ void TetMesh::loadNodesFromFile(QString filename)
 			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
 		}
 
+		m_rest_positions = m_nodes;
 
-		// mass will be loaded from outer file in later version, this is just for quick test
-		m_nodes_mass = Eigen::VectorXd::Ones(n_nodes) * 0.0001;
+
+		m_nodes_mass = Eigen::VectorXd::Zero(n_nodes);
 		m_velocities = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
-		m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
-
 		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
 		//std::cout << m_nodes;
 
@@ -111,20 +110,27 @@ void TetMesh::initModel()
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
+	setTetMaterial(5000000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
+	// also each node's weight
+	double w;
 	for (size_t i = 0; i < n_tets; ++i)
 	{
 		Eigen::Matrix3d Dm = Eigen::Matrix3d::Zero();
 		Dm.col(0) = (m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(1) = (m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
+		w = std::abs(Dm.determinant()) / 24.0 * m_density;
+		for (size_t j = 0; j < 4; ++j)
+		{
+			m_nodes_mass(m_tets(j, i)) += w;
+		}
 		m_Dm_inverses.block<3,3>(0,i*3) = Dm.inverse();
-
 		computeANs(i);
 	}	
-
-	setTetMaterial(1000000, 0.45);
+	m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
+	
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 
@@ -203,10 +209,11 @@ void TetMesh::computeForces()
 	//std::cout << "one iteration" << std::endl;
 }
 
-void TetMesh::setTetMaterial(double e, double nu)
+void TetMesh::setTetMaterial(double e, double nu, double den)
 {
 	m_E  = e;
 	m_nu = nu;
+	m_density = den;
 
 	m_Enu1 = m_E / (1 + m_nu);
 	m_Enu2 = m_Enu1 * m_nu / (1- m_nu * 2);
@@ -267,9 +274,11 @@ void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
 
 		for (int i = 0; i < row; ++i){
 			for (int j = 0; j < col; ++j){
-				stream << mat(i, j) << "\t";
+				stream << mat(i, j) << ",";
 			}
 			stream << endl;
 		}
+		file.close();
 	}
+	
 }
