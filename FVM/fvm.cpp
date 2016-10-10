@@ -5,7 +5,7 @@ FVM::FVM(QWidget *parent)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
-	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum());
+	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),m_tetMesh->getMasses());
 	ui.glWidget->setGLTetMesh(m_tetMesh);
 	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
 
@@ -43,22 +43,49 @@ void FVM::DoLoadConfig()
 
 void FVM::DoOneStep()
 {
-	if (m_iter++ < 10000)
-	{
-		m_tetMesh->computeForces();
-		m_integrator->simuExplicit(m_tetMesh->getNodes(),
-			m_tetMesh->getVelocities(),
-			m_tetMesh->getForces(),
-			m_tetMesh->getMasses());
-		m_tetMesh->updateNodesVelocities(m_integrator->getPositions(), m_integrator->getVelocities());
-		ui.glWidget->update();
-	}
-	else
-	{
-		m_iter = 0;
-		QString snap_file = QStringLiteral("snapshot_%1").arg(++m_frameID) + QStringLiteral(".png");
-		ui.glWidget->saveSnapshot(snap_file, true);
-	}
+	/************************linear model using explicit time integration*****************************/
+	//if (m_iter++ < 10000)
+	//{
+	//	m_tetMesh->computeForces();
+	//	m_integrator->simuExplicit(m_tetMesh->getNodes(),
+	//		m_tetMesh->getVelocities(),
+	//		m_tetMesh->getForces(),
+	//		m_tetMesh->getMasses());
+	//	m_tetMesh->updateNodesVelocities(m_integrator->getPositions(), m_integrator->getVelocities());
+	//	ui.glWidget->update();
+	//}
+	//else
+	//{
+	//	m_iter = 0;
+	//	QString snap_file = QStringLiteral("snapshot_%1").arg(++m_frameID) + QStringLiteral(".png");
+	//	ui.glWidget->saveSnapshot(snap_file, true);
+	//}
+
+	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
+
+	m_integrator->BackEuler(m_tetMesh->getNodes(),
+		m_tetMesh->getVelocities(),
+		forces, K);
+	//m_nodes.col(0) = Eigen::Vector3d(1.0, 1.0, 1.0);
+	//m_velocities.col(0) = Eigen::Vector3d::Zero();
+	//m_tetMesh->getNodes().col(0) = Eigen::Vector3d(0.1, 0.1, 0.1);
+	//m_tetMesh->getVelocities().col(0) = Eigen::Vector3d::Zero();
+	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
+	//m_velocities.col(1) = Eigen::Vector3d::Zero();
+
+	std::cout << "positions: " << std::endl;
+	std::cout << m_tetMesh->getNodes() << std::endl;
+
+	std::cout << "forces: " << std::endl;
+	std::cout << m_tetMesh->getForces() << std::endl;
+
+	std::cout << "velocity: " << std::endl;
+	std::cout << m_tetMesh->getVelocities() << std::endl;
+
+	std::cout << std::endl;
+
+	ui.glWidget->update();
 }
 
 void FVM::DoRun()

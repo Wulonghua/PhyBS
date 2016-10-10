@@ -110,7 +110,7 @@ void TetMesh::initModel()
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	setTetMaterial(5000000, 0.45,1000);
+	setTetMaterial(10000000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight
@@ -237,8 +237,8 @@ void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::Ma
 	m_velocities = vel;
 
 	//cube test with fixed node 
-	m_nodes.col(8) = Eigen::Vector3d(0, 0.5, -0.5);
-	m_velocities.col(8) = Eigen::Vector3d::Zero();
+	//m_nodes.col(8) = Eigen::Vector3d(0, 0.5, -0.5);
+	//m_velocities.col(8) = Eigen::Vector3d::Zero();
 
 	// tet test with fixed node
 	//m_nodes.col(0) = Eigen::Vector3d(1.0, 1.0, 1.0);

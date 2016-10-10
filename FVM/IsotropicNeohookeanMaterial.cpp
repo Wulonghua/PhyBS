@@ -46,7 +46,7 @@ Eigen::Matrix3d IsotropicNeohookeanMaterial::computeEnergy2InvariantsHessian(int
 	return hessian;
 }
 
-void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
+Eigen::MatrixXd IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 {
 	computeFhatsInvariants();
 	int n = m_tetModel->getTetsNum();
@@ -54,6 +54,7 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 	double mu, lambda, I3;
 	Eigen::Matrix3d P,U,V,forces;
 
+	m_tetModel->initForcesFromGravity();
 	for (int i = 0; i < n; ++i)
 	{
 		// compute First Piola-Kirchhoff stress based on diagonalized F.
@@ -80,6 +81,8 @@ void IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 	}
+
+	return m_tetModel->getForces();
 }
 
 Eigen::MatrixXd IsotropicNeohookeanMaterial::computeDP2DF(int tetID)
@@ -200,7 +203,7 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	// test
 	//m_tetModel->writeMatrix("mat.csv", dfdx);
 
-	return dfdx;
+	return -dfdx;
 
 }
 
