@@ -15,6 +15,8 @@ void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d 
 {
 	Eigen::JacobiSVD<Eigen::Matrix3d> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
 	S = svd.singularValues();
+	//for (int i = 0; i < 3; ++i)
+	//	S(i) = m_tetModel->fixPrecision(S(i));
 	V = svd.matrixV();
 
 	// Fix V if determinant of V is equal to -1
@@ -66,12 +68,13 @@ void IsotropicMaterial::computeFhatsInvariants()
 	{
 		F = m_tetModel->computeDeformationGradient(i);
 
-		std::cout << "F: " << std::endl;
-		std::cout << F << std::endl;
-
+		//std::cout << "F: " << std::endl;
+		//std::cout << F << std::endl;
 
 		computeSVD33modified(F, Fhat, U, V);
 		m_Fhats.col(i) = Fhat;
+		double t = Fhat[0];
+
 		m_Us.block<3, 3>(0, i * 3) = U;
 		m_Vs.block<3, 3>(0, i * 3) = V;
 

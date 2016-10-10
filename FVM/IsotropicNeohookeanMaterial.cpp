@@ -62,38 +62,35 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 		Fhat = m_Fhats.col(i);
 		Fhat_inverseT = Fhat.cwiseInverse();
 
-		std::cout << "Fhat: " << std::endl;
-		std::cout << Fhat << std::endl;
-		std::cout << "Fhat inverseT" << std::endl;
-		std::cout << Fhat_inverseT << std::endl;
+		//std::cout << "Fhat: " << std::endl;
+		//std::cout << Fhat << std::endl;
+		//std::cout << "Fhat inverseT" << std::endl;
+		//std::cout << Fhat_inverseT << std::endl;
 
 		mu = m_mus[i];
 		lambda = m_lambdas[i];
 		I3 = m_Invariants(2, i);
 
-		std::cout << "I3: " << I3 << std::endl;
+		//std::cout << "I3: " << I3 << std::endl;
 		Phat = (Fhat - Fhat_inverseT) * mu + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
 
-		double tmp = Phat[0];
-		std::cout << "Phat:" << std::endl;
-		std::cout << Phat << std::endl;
+		//double tmp = Phat[0];
+		//std::cout << "Phat:" << std::endl;
+		//std::cout << Phat << std::endl;
 		
-		// equation 1 in [Teran 04] P = U * Fhat * V^T
+		// equation 1 in [Teran 04] P = U * Phat * V^T
 		U = m_Us.block<3, 3>(0, 3 * i);
 		V = m_Vs.block<3, 3>(0, 3 * i);
-		P.col(0) = U.col(0) * Phat(0);
-		P.col(1) = U.col(1) * Phat(1);
-		P.col(2) = U.col(2) * Phat(2);
-		P = P * V.transpose();
+		P = U * Phat.asDiagonal() * V.transpose();
 
-		std::cout << "U: " << std::endl;
-		std::cout << U << std::endl;
+		//std::cout << "U: " << std::endl;
+		//std::cout << U << std::endl;
 
-		std::cout << "V: " << std::endl;
-		std::cout << V << std::endl;
+		//std::cout << "V: " << std::endl;
+		//std::cout << V << std::endl;
 
-		std::cout << "P: " << std::endl;
-		std::cout << P << std::endl;
+		//std::cout << "P: " << std::endl;
+		//std::cout << P << std::endl;
 
 		forces = P * m_tetModel->getAN(i);
 
@@ -224,7 +221,7 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 	// test
 	//m_tetModel->writeMatrix("mat.csv", dfdx);
 
-	return -dfdx;
+	return dfdx;
 
 }
 

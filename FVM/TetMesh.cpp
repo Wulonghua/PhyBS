@@ -153,12 +153,22 @@ void TetMesh::computeANs(int tetid)
 
 Eigen::Matrix3d TetMesh::computeDeformationGradient(int i) // i is tet's index
 {
-	Eigen::Matrix3d Ds;
+	Eigen::Matrix3d Ds, tmp;
 	Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
 	Ds.col(1) = m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i));
 	Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
 
-	return Ds * m_Dm_inverses.block<3, 3>(0, 3 * i);
+	tmp = Ds * m_Dm_inverses.block<3, 3>(0, 3 * i);
+
+	//for (int k = 0; k < 3; ++k)
+	//{
+	//	for (int j = 0; j < 3; ++j)
+	//	{
+	//		tmp(k, j) = fixPrecision(tmp(k, j));
+	//	}
+	//}
+
+	return tmp;
 }
 
 
@@ -281,4 +291,24 @@ void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
 		file.close();
 	}
 	
+}
+
+double TetMesh::fixPrecision(double m)
+{
+	bool isNegtive = false;
+	if (m < 0)
+	{
+		isNegtive = true;
+		m *= -1.0;
+	}
+
+	double itg = std::floor(m);
+	double f = m - itg;
+	f = std::round(f*1e8) * 1e-8;
+	itg += f;
+
+	if (isNegtive)
+		return -itg;
+	else
+		return itg;
 }

@@ -44,11 +44,13 @@ public:
 
 	// for test
 	void writeMatrix(QString file, Eigen::MatrixXd mat);
+	double fixPrecision(double m);
 
 private:
 	void initModel();
 	void computeANs(int tetid);
 	void computeBoundfaceNormals();
+	
 
 	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
 	Eigen::MatrixXd m_rest_positions;	// nodes' restposition	: 3*n matrix

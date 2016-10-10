@@ -8,7 +8,7 @@ TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 	n_nodes = num_nodes;
 }
 
-TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-3)
+TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-4)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
