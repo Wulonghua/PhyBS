@@ -61,10 +61,22 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 		// Use the equation from SIGGRAPH course note[Sifaki 2012] Page 24
 		Fhat = m_Fhats.col(i);
 		Fhat_inverseT = Fhat.cwiseInverse();
+
+		std::cout << "Fhat: " << std::endl;
+		std::cout << Fhat << std::endl;
+		std::cout << "Fhat inverseT" << std::endl;
+		std::cout << Fhat_inverseT << std::endl;
+
 		mu = m_mus[i];
 		lambda = m_lambdas[i];
 		I3 = m_Invariants(2, i);
-		Phat = mu * (Fhat - Fhat_inverseT) + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
+
+		std::cout << "I3: " << I3 << std::endl;
+		Phat = (Fhat - Fhat_inverseT) * mu + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
+
+		double tmp = Phat[0];
+		std::cout << "Phat:" << std::endl;
+		std::cout << Phat << std::endl;
 		
 		// equation 1 in [Teran 04] P = U * Fhat * V^T
 		U = m_Us.block<3, 3>(0, 3 * i);
@@ -73,6 +85,15 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeInnerForcesfromFhats()
 		P.col(1) = U.col(1) * Phat(1);
 		P.col(2) = U.col(2) * Phat(2);
 		P = P * V.transpose();
+
+		std::cout << "U: " << std::endl;
+		std::cout << U << std::endl;
+
+		std::cout << "V: " << std::endl;
+		std::cout << V << std::endl;
+
+		std::cout << "P: " << std::endl;
+		std::cout << P << std::endl;
 
 		forces = P * m_tetModel->getAN(i);
 

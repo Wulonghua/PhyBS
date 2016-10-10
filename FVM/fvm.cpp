@@ -64,6 +64,18 @@ void FVM::DoOneStep()
 	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
 	Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
 
+	std::cout << "before integration: " << std::endl;
+	std::cout << "positions: " << std::endl;
+	std::cout << m_tetMesh->getNodes() << std::endl;
+
+	std::cout << "forces: " << std::endl;
+	std::cout << m_tetMesh->getForces() << std::endl;
+
+	std::cout << "velocity: " << std::endl;
+	std::cout << m_tetMesh->getVelocities() << std::endl;
+
+	std::cout << std::endl;
+
 	m_integrator->BackEuler(m_tetMesh->getNodes(),
 		m_tetMesh->getVelocities(),
 		forces, K);
@@ -74,6 +86,7 @@ void FVM::DoOneStep()
 	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
 	//m_velocities.col(1) = Eigen::Vector3d::Zero();
 
+	std::cout << "after integration: " << std::endl;
 	std::cout << "positions: " << std::endl;
 	std::cout << m_tetMesh->getNodes() << std::endl;
 

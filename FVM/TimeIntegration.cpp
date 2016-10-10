@@ -49,6 +49,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 	int n = pos.cols();
 	Eigen::MatrixXd A = -m_t*m_t*K;
 	A.diagonal() += m_masses;
+	//std::cout << A << std::endl;
 	pos.resize(3*n,1);
 	vel.resize(3*n,1);
 	force.resize(3*n,1);
@@ -60,7 +61,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 
 	Eigen::ConjugateGradient<Eigen::MatrixXd> cg_solver;
 	cg_solver.compute(A);
-	cg_solver.setTolerance(1e-6);
+	cg_solver.setTolerance(1e-8);
 	v = cg_solver.solve(b);
 	p += m_t * v;
 

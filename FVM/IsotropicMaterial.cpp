@@ -30,7 +30,7 @@ void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d 
 
 	U = F * V * ss;
 	//The returned singular values are already sorted in descending order if use Eigen lib function
-	//Fix U is certain singularvalue is below epsilon or equal to 0.
+	//Fix U if certain singularvalue is below epsilon or equal to 0.
 	if (S(0) < m_eps_singularvalue) //all singular values are equal to 0 or below epsilon
 	{
 		U = Eigen::Matrix3d::Identity();
@@ -47,7 +47,7 @@ void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d 
 		U.col(2) = U.col(0).cross(U.col(1)).normalized();
 	}
 
-	//Fix U and negate minimal singularvalue if dterminant of U is equal to -1
+	//Fix U and negate minimal singularvalue if determinant of U is equal to -1
 	if (U.determinant() < 0) // ==-1
 	{
 		U.col(2) = U.col(2) * (-1);
@@ -65,6 +65,11 @@ void IsotropicMaterial::computeFhatsInvariants()
 	for (int i = 0; i < n; ++i)
 	{
 		F = m_tetModel->computeDeformationGradient(i);
+
+		std::cout << "F: " << std::endl;
+		std::cout << F << std::endl;
+
+
 		computeSVD33modified(F, Fhat, U, V);
 		m_Fhats.col(i) = Fhat;
 		m_Us.block<3, 3>(0, i * 3) = U;
