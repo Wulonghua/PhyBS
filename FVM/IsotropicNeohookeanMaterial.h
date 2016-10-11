@@ -1,6 +1,7 @@
 #pragma once
 #include "IsotropicMaterial.h"
 #include <Eigen\Dense>
+#include <Eigen\Sparse>
 #include <algorithm>
 #include <cmath>
 #include <array>
@@ -19,8 +20,7 @@ public:
 
 	// compute stiffness Matrix
 	Eigen::MatrixXd computeStiffnessMatrix(int tetID);
-
-
+	Eigen::SparseMatrix<double> computeGlobalStiffnessMatrix();
 
 private:
 	// compute dP/dF

@@ -220,9 +220,40 @@ Eigen::MatrixXd IsotropicNeohookeanMaterial::computeStiffnessMatrix(int tetID)
 
 	// test
 	//m_tetModel->writeMatrix("mat.csv", dfdx);
-
 	return dfdx;
+}
 
+Eigen::SparseMatrix<double> IsotropicNeohookeanMaterial::computeGlobalStiffnessMatrix()
+{
+	int n = m_tetModel->getNodesNum();
+	int m = m_tetModel->getTetsNum();
+	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+	Eigen::MatrixXd K;
+	int Ki, Kj, gKi,gKj;
+
+	for (int i = 0; i < m; ++i)
+	{
+		K = computeStiffnessMatrix(i);
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			for (int fj = 0; fj < 3; ++fj)
+			{
+				Ki = fi * 3 + fj;
+				gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+				for (int ni = 0; ni < 4; ++ni)
+				{
+					for (int nj = 0; nj < 3; ++nj)
+					{
+						Kj = ni * 3 + nj;
+						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
+						gK.coeffRef(gKi, gKj) += K(Ki,Kj);
+					}
+				}
+			}
+		}
+	}
+
+	return gK;
 }
 
 Eigen::Matrix3d IsotropicNeohookeanMaterial::restoreMatrix33fromTeranVector(Eigen::VectorXd v)

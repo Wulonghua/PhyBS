@@ -41,6 +41,10 @@ void TetMesh::loadNodesFromFile(QString filename)
 
 		m_nodes_mass = Eigen::VectorXd::Zero(n_nodes);
 		m_velocities = Eigen::MatrixXd::Zero(3, n_nodes);
+
+		//for test
+		//m_velocities.row(1) = -50.0 * Eigen::VectorXd::Ones(n_nodes);
+
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
 		//std::cout << m_nodes;
@@ -104,13 +108,13 @@ void TetMesh::loadFacesFromFile(QString filename)
 
 void TetMesh::initModel()
 {
-	loadNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
-	loadTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
-	loadFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+	loadNodesFromFile(QStringLiteral("..\\model\\torus\\torus.1.node"));
+	loadTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
+	loadFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	setTetMaterial(10000000, 0.45,1000);
+	setTetMaterial(100000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight
@@ -282,15 +286,16 @@ void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
 		int row = mat.rows();
 		int col = mat.cols();
 
-		for (int i = 0; i < row; ++i){
-			for (int j = 0; j < col; ++j){
+		for (int i = 0; i < row; ++i)
+		{
+			for (int j = 0; j < col; ++j)
+			{
 				stream << mat(i, j) << ",";
 			}
 			stream << endl;
 		}
 		file.close();
 	}
-	
 }
 
 double TetMesh::fixPrecision(double m)

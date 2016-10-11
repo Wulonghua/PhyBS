@@ -60,10 +60,12 @@ void FVM::DoOneStep()
 	//	QString snap_file = QStringLiteral("snapshot_%1").arg(++m_frameID) + QStringLiteral(".png");
 	//	ui.glWidget->saveSnapshot(snap_file, true);
 	//}
+	/**********************************************************************************************/
 
+	/******************************Back Euler integration**********************************/
 	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
-	Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-
+	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;
@@ -78,11 +80,13 @@ void FVM::DoOneStep()
 
 	m_integrator->BackEuler(m_tetMesh->getNodes(),
 		m_tetMesh->getVelocities(),
-		forces, K);
+		forces, sK);
 
-	m_tetMesh->getNodes().col(0) = Eigen::Vector3d(0.1, 0.1, 0.1);
+	//m_tetMesh->getNodes().col(0) = Eigen::Vector3d(0.1, 0.1, 0.1);
 	//m_tetMesh->getVelocities().col(0) = Eigen::Vector3d::Zero();
 	
+	
+
 	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
 	//m_velocities.col(1) = Eigen::Vector3d::Zero();
 
@@ -97,8 +101,11 @@ void FVM::DoOneStep()
 	//std::cout << m_tetMesh->getVelocities() << std::endl;
 
 	//std::cout << std::endl;
-
+	//QString snap_file = QStringLiteral("torus_%1").arg(++m_frameID) + QStringLiteral(".bmp");
+	//ui.glWidget->saveSnapshot(snap_file, true);
+	/***********************************************************************************************/
 	ui.glWidget->update();
+
 }
 
 void FVM::DoRun()
@@ -119,7 +126,17 @@ void FVM::DoStop()
 
 void FVM::DoTest()
 {
-	m_IsoMaterial->computeInnerForcesfromFhats();
-	auto m = m_IsoMaterial->computeStiffnessMatrix(0);
-	std::cout << m;
+	//m_IsoMaterial->computeInnerForcesfromFhats();
+	//auto m = m_IsoMaterial->computeStiffnessMatrix(0);
+	//std::cout << m;
+	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
+	std::cout << "K: " << std::endl;
+	std::cout << K << std::endl;
+
+	Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	Eigen::MatrixXd Kt;
+	Kt = Eigen::MatrixXd(gK);
+	std::cout << "Kt: " << std::endl;
+	std::cout << Kt << std::endl;
 }

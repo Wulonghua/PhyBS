@@ -8,7 +8,7 @@ TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 	n_nodes = num_nodes;
 }
 
-TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-4)
+TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-3)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
@@ -70,4 +70,54 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 	pos.resize(3, n);
 	vel.resize(3 ,n);
 	force.resize(3,n);
+
+	addGroundConstraints(-0.1, pos, vel);
+}
+
+void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
+	Eigen::MatrixXd & vel,
+	Eigen::MatrixXd & force,
+	Eigen::SparseMatrix<double> & K)
+{
+	int n = pos.cols();
+	Eigen::SparseMatrix<double> A = -m_t*m_t*K;
+	for (int i = 0; i < 3 * n; ++i)
+	{
+		A.coeffRef(i, i) += m_masses(i);
+	}
+	//std::cout << A << std::endl;
+	pos.resize(3 * n, 1);
+	vel.resize(3 * n, 1);
+	force.resize(3 * n, 1);
+	Eigen::VectorXd p = pos;
+	Eigen::VectorXd v = vel;
+	Eigen::VectorXd f = force;
+
+	Eigen::VectorXd b = m_masses.cwiseProduct(v) + m_t * f;
+
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> cg_solver;
+	cg_solver.compute(A);
+	cg_solver.setTolerance(1e-8);
+	v = cg_solver.solve(b);
+	p += m_t * v;
+
+	pos = p.matrix();
+	vel = v.matrix();
+	pos.resize(3, n);
+	vel.resize(3, n);
+	force.resize(3, n);
+
+	addGroundConstraints(-1.0, pos, vel);
+}
+
+void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)
+{
+	for (size_t i = 0; i < n_nodes; ++i)
+	{
+		if (pos(1, i) < y)
+		{
+			pos(1, i) = y;
+			vel.col(i) = Eigen::Vector3d::Zero();
+		}
+	}
 }
