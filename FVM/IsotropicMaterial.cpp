@@ -2,7 +2,7 @@
 
 
 IsotropicMaterial::IsotropicMaterial() :
-m_eps_singularvalue(1e-8), 
+m_eps_singularvalue(1e-6), 
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
 }
@@ -399,21 +399,83 @@ void IsotropicMaterial::computeEnergy2FhatHessian(int tetID, const double *Fhats
 }
 
 // see [Xu et al. 2015] Section 3.1 euqation 10
-void IsotropicMaterial::computeDPFhat2DFij(int tetID, const double * hessian, int i, int j, double *dPFhatdFij_diagonal)
+void IsotropicMaterial::computeDPFhat2DFij(const double *U, const double *V, const double * hessian, int i, int j, double *dPFhatdFij_diagonal)
 {
-	Eigen::Matrix3d U = m_Us.block<3, 3>(0, 3 * tetID);
-	Eigen::Matrix3d V = m_Vs.block<3, 3>(0, 3 * tetID);
-
 	double w[3];
 	// w[k] = dlambda_k/dF_ij = U_ik * V_jk see equation (7) of paper [PAPADOPOULO 2006]
 	// "Estimating the Jacobian of the Singular Value Decomposition: Theory and Applications" 
 	for (int k = 0; k < 3; ++k)
 	{
-		w[k] = U(i, k) * V(j, k);
+		w[k] = U[i*3 + k] * V[j*3 + k];
 	}
 
 	for (int k = 0; k < 3; ++k)
 	{
 		dPFhatdFij_diagonal[k] = hessian[k] * w[0] + hessian[k + 3] * w[1] + hessian[k + 6] * w[2];
 	}
+}
+
+void IsotropicMaterial::computeDPDF(const double *U, const double *Fhats, const double *V)
+{
+	Eigen::Matrix3d Utilde, Vtilde;
+	Utilde << U[0], U[1], U[2],
+		U[3], U[4], U[5],
+		U[6], U[7], U[8];
+	Vtilde << V[0], V[1], V[2],
+		V[3], V[4], V[5],
+		V[6], V[7], V[8];
+
+	double Ftildes[3];
+
+	// perturbation: handle degenerated cases: see the paragraph between equation (9) and equation (10)
+	// in paper [Xu et al. 2015]
+
+	// attention: Fhats are already sorted in descending order.
+	if (Fhats[0] - Fhats[2] < 2 * m_eps_singularvalue)
+	{
+		Ftildes[2] = Fhats[2];
+		Ftildes[1] = Ftildes[2] + m_eps_singularvalue;
+		Ftildes[0] = Ftildes[1] + m_eps_singularvalue;
+	}
+	else // Fhats[0] - Fhats[2] >= 2 * m_eps_singularvalue
+	{
+		if ((Fhats[0] - Fhats[1] < m_eps_singularvalue) && (Fhats[1] - Fhats[2] >= m_eps_singularvalue))
+		{
+			Ftildes[2] = Fhats[2];
+			Ftildes[1] = Fhats[1];
+			Ftildes[0] = Fhats[1] + m_eps_singularvalue;
+		}
+		else if ((Fhats[0] - Fhats[1] >= m_eps_singularvalue) && (Fhats[1] - Fhats[2] < m_eps_singularvalue))
+		{
+			Ftildes[2] = Fhats[2];
+			Ftildes[1] = Fhats[2] + m_eps_singularvalue;
+			Ftildes[0] = Fhats[0];
+		}
+		else
+		{
+			Ftildes[2] = Fhats[2];
+			Ftildes[1] = Fhats[1];
+			Ftildes[0] = Fhats[0];
+		}
+	}
+
+	Utilde.col(0) *= Ftildes[0];
+	Utilde.col(1) *= Ftildes[1];
+	Utilde.col(2) *= Ftildes[2];
+
+	Eigen::Matrix3d Fnew = Utilde * Vtilde.transpose();
+
+	Eigen::Matrix3d Unew, Vnew;
+	Eigen::Vector3d  Fhatnew;
+
+	computeSVD33modified(Fnew, Fhatnew, Unew, Vnew);
+
+}
+
+void IsotropicMaterial::computeDPDFij(const double *U, const double *Fhat, const double *V)
+{
+
+
+
+
 }

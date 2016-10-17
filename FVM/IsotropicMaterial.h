@@ -67,7 +67,10 @@ private:
 	const std::array<int, 9> m_matrix33fromTeran; // transfer teran's order to 3*3 matrix row major
 
 	// compute the diagonal entries of the dP(Fhat)/dFij
-	void computeDPFhat2DFij(int tetID, const double * hessian, int i, int j, double *dPFhatdFij_diagonal);
+	void computeDPFhat2DFij(const double *U, const double *V, const double * hessian, int i, int j, double *dPFhatdFij_diagonal);
 
+	// Different method: see [Xu et al. 2015] Section3.2 equation (5)
+	void computeDPDFij(const double *U, const double *Fhat, const double *V);
+	void computeDPDF(const double *U, const double *Fhat, const double *V);
 };
 
