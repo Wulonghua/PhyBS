@@ -415,7 +415,7 @@ void IsotropicMaterial::computeDPFhat2DFij(const double *U, const double *V, con
 	}
 }
 
-void IsotropicMaterial::computeDPDF(const double *U, const double *Fhats, const double *V)
+void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fhats, const double *V, double *dPdF)
 {
 	Eigen::Matrix3d Utilde, Vtilde;
 	Utilde << U[0], U[1], U[2],
@@ -470,12 +470,96 @@ void IsotropicMaterial::computeDPDF(const double *U, const double *Fhats, const 
 
 	computeSVD33modified(Fnew, Fhatnew, Unew, Vnew);
 
+	//compute PFhat
+	double PFhat[3];
+	computeEnergy2FhatGradient(tetID, Fhatnew.data(), PFhat);
+
+	double hessian[9];
+	computeEnergy2FhatHessian(tetID, Fhatnew.data(), hessian);
+
+
+	double dPdFij[9];
+	int Fid;
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
+		{
+			Fid = 3 * i + j;
+			// transpose Unew and Vnew cause they are in stored in column-major matrix (Eigen default setting)
+			computeDPDFij(Unew.transpose().data(), Fhatnew.data(), Vnew.transpose().data(),
+				           PFhat, hessian, i, j, dPdFij);
+			// copy dPdFij to dPdF
+			for (int k = 0; k < 9; ++k)
+			{
+				dPdF[k * 9 + Fid] = dPdFij[k];
+			}
+		}
+	}
 }
 
-void IsotropicMaterial::computeDPDFij(const double *U, const double *Fhat, const double *V)
+void IsotropicMaterial::computeDPDFij(const double *U, const double *Fhats, const double *V, const double *PFhats, const double *hessian, int i, int j, double *dPdFij)
 {
+	Eigen::Matrix3d Umat, Vmat;
+	Umat << U[0], U[1], U[2],
+		U[3], U[4], U[5],
+		U[6], U[7], U[8];
+	Vmat << V[0], V[1], V[2],
+		V[3], V[4], V[5],
+		V[6], V[7], V[8];
 
+	Eigen::Matrix3d wU, wVT;
+	wU = Eigen::Matrix3d::Zero();
+	wVT = Eigen::Matrix3d::Zero();
 
+	Eigen::Matrix2d lambdaMat;
+	Eigen::Vector2d uv,wUVT;
 
+	int kl[3][2] = { { 0, 1 }, { 0, 2 }, { 1, 2 } };
+	int k, l;
 
+	for (int kli = 0; kli < 3; ++kli)
+	{
+		k = kl[kli][0];
+		l = kl[kli][1];
+		lambdaMat(0, 0) = lambdaMat(1, 1) = Fhats[l];
+		lambdaMat(0, 1) = lambdaMat(1, 0) = Fhats[k];
+		uv[0] = U[3 * i + k] * V[3 * j + l];
+		uv[1] = -U[3 * i + l] * V[3 * j + k];
+
+		wUVT = lambdaMat.inverse() * uv;
+
+		wU(k, l) = wUVT(0);
+		wU(l, k) = -wUVT(0);
+
+		wVT(k, l) = wUVT(1);
+		wVT(l, k) = -wUVT(1);
+	}
+
+	Eigen::Matrix3d dUdFij = Umat * wU;
+	Eigen::Matrix3d dVTdFij = wVT * Vmat.transpose();
+
+	double dPFhatdFij[3];
+
+	computeDPFhat2DFij(U, V, hessian, i, j, dPFhatdFij);
+
+	// equation(5) in paper [Xu et al. 2015] section 3.2
+	Eigen::Matrix3d dPdFijMat = helperMatDiagonalMat(dUdFij, PFhats, Vmat.transpose())
+		+ helperMatDiagonalMat(Umat, dPFhatdFij, Vmat.transpose())
+		+ helperMatDiagonalMat(Umat, PFhats, dVTdFij);
+
+	for (int m = 0; m < 3; ++m)
+	{
+		for (int n = 0; n < 3; ++n)
+		{
+			dPdFij[m * 3 + n] = dPdFijMat(m, n);
+		}
+	}
+}
+
+Eigen::Matrix3d IsotropicMaterial::helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B)
+{
+	for (int i = 0; i < 3;++i)
+		A.col(i) *= diagonal[i];
+
+	return A*B;
 }

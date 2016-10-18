@@ -71,7 +71,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 	vel.resize(3 ,n);
 	force.resize(3,n);
 
-	addGroundConstraints(-0.1, pos, vel);
+	addGroundConstraints(-0.15, pos, vel);
 }
 
 void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
@@ -107,7 +107,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	vel.resize(3, n);
 	force.resize(3, n);
 
-	addGroundConstraints(-1.0, pos, vel);
+	addGroundConstraints(-0.3, pos, vel);
 }
 
 void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)
