@@ -440,26 +440,26 @@ void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fh
 
 	// perturbation: handle degenerated cases: see the paragraph between equation (9) and equation (10)
 	// in paper [Xu et al. 2015]
-
+	double eps_singularvalue = 1e-6;
 	// attention: Fhats are already sorted in descending order.
-	if (Fhats[0] - Fhats[2] < 2 * m_eps_singularvalue)
+	if (Fhats[0] - Fhats[2] < 2 * eps_singularvalue)
 	{
 		Ftildes[2] = Fhats[2];
-		Ftildes[1] = Ftildes[2] + m_eps_singularvalue;
-		Ftildes[0] = Ftildes[1] + m_eps_singularvalue;
+		Ftildes[1] = Ftildes[2] + eps_singularvalue;
+		Ftildes[0] = Ftildes[1] + eps_singularvalue;
 	}
 	else // Fhats[0] - Fhats[2] >= 2 * m_eps_singularvalue
 	{
-		if ((Fhats[0] - Fhats[1] < m_eps_singularvalue) && (Fhats[1] - Fhats[2] >= m_eps_singularvalue))
+		if ((Fhats[0] - Fhats[1] < eps_singularvalue) && (Fhats[1] - Fhats[2] >= eps_singularvalue))
 		{
 			Ftildes[2] = Fhats[2];
 			Ftildes[1] = Fhats[1];
-			Ftildes[0] = Fhats[1] + m_eps_singularvalue;
+			Ftildes[0] = Fhats[1] + eps_singularvalue;
 		}
-		else if ((Fhats[0] - Fhats[1] >= m_eps_singularvalue) && (Fhats[1] - Fhats[2] < m_eps_singularvalue))
+		else if ((Fhats[0] - Fhats[1] >= eps_singularvalue) && (Fhats[1] - Fhats[2] < eps_singularvalue))
 		{
 			Ftildes[2] = Fhats[2];
-			Ftildes[1] = Fhats[2] + m_eps_singularvalue;
+			Ftildes[1] = Fhats[2] + eps_singularvalue;
 			Ftildes[0] = Fhats[0];
 		}
 		else
