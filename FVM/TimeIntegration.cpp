@@ -8,7 +8,7 @@ TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 	n_nodes = num_nodes;
 }
 
-TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-3)
+TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(2e-3)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
@@ -22,6 +22,29 @@ TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(1e-3)
 		m_masses[3 * i + 2] = m[i];
 	}
 
+}
+
+TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m, std::vector<int> constraints, Eigen::MatrixXd rest_pos) :
+m_t(2e-3), m_constraints(constraints), m_rest(rest_pos)
+{
+	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
+	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
+	n_nodes = num_nodes;
+	m_masses = Eigen::VectorXd::Zero(3 * num_nodes);
+
+	for (size_t i = 0; i < num_nodes; ++i)
+	{
+		m_masses[3 * i] = m[i];
+		m_masses[3 * i + 1] = m[i];
+		m_masses[3 * i + 2] = m[i];
+	}
+
+	for (size_t i = 0; i < m_constraints.size(); ++i)
+	{
+		m_masses[3 * i] = 0;
+		m_masses[3 * i + 1] = 0;
+		m_masses[3 * i + 2] = 0;
+	}
 }
 
 
@@ -71,7 +94,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 	vel.resize(3 ,n);
 	force.resize(3,n);
 
-	addGroundConstraints(-0.15, pos, vel);
+	addGroundConstraints(-2.0, pos, vel);
 }
 
 void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
@@ -79,6 +102,13 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	Eigen::MatrixXd & force,
 	Eigen::SparseMatrix<double> & K)
 {
+	for (int i = 0; i < m_constraints.size(); ++i)
+	{
+		pos.col(m_constraints[i]) = Eigen::Vector3d::Zero();
+		vel.col(m_constraints[i]) = Eigen::Vector3d::Zero();
+		force.col(m_constraints[i]) = Eigen::Vector3d::Zero();
+	}
+	
 	int n = pos.cols();
 	Eigen::SparseMatrix<double> A = -m_t*m_t*K;
 	for (int i = 0; i < 3 * n; ++i)
@@ -107,7 +137,11 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	vel.resize(3, n);
 	force.resize(3, n);
 
-	addGroundConstraints(-0.3, pos, vel);
+	for (int i = 0; i < m_constraints.size(); ++i)
+	{
+		pos.col(m_constraints[i]) = m_rest.col(m_constraints[i]);
+	}
+	//addGroundConstraints(-1.0, pos, vel);
 }
 
 void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)

@@ -5,7 +5,9 @@ FVM::FVM(QWidget *parent)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
-	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),m_tetMesh->getMasses());
+	//m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),m_tetMesh->getMasses());
+	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),
+		m_tetMesh->getMasses(),m_tetMesh->getConstraintIDs(),m_tetMesh->getRestPosition());
 	ui.glWidget->setGLTetMesh(m_tetMesh);
 	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
 

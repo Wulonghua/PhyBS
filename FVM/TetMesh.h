@@ -30,6 +30,8 @@ public:
 	Eigen::MatrixXd & getVelocities() { return m_velocities; }
 	Eigen::MatrixXd & getForces() { return m_nodes_forces; }
 	Eigen::VectorXd & getMasses() { return m_nodes_mass; }
+	Eigen::MatrixXd & getRestPosition() { return m_rest_positions; }
+	std::vector<int> & getConstraintIDs() { return m_constraintIDs; }
 	int getNodesNum() { return n_nodes; }
 	int getTetsNum() { return n_tets; }
 	double getE() { return m_E; }
@@ -37,6 +39,7 @@ public:
 	Eigen::Matrix3d getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
 	Eigen::Matrix3d getDmInv(int tetID) { return m_Dm_inverses.block<3, 3>(0, 3 * tetID); }
 	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
+	
 
 	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}
 	void addNodeForce(int nodeID, Eigen::Vector3d const &force) { m_nodes_forces.col(nodeID) += force; }
@@ -68,7 +71,8 @@ private:
 	Eigen::MatrixXd m_nodes_gravity;
 
 	Eigen::MatrixXd m_nodes_forces;
-
+	
+	std::vector<int> m_constraintIDs;
 
 	double m_density;
 	double m_E;

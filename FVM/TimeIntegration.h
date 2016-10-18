@@ -8,6 +8,7 @@ class TimeIntegration
 public:
 	TimeIntegration(int n_nodes);
 	TimeIntegration(int n_nodes, Eigen::VectorXd m_masses);
+	TimeIntegration(int n_nodes, Eigen::VectorXd m_masses, std::vector<int> constraints, Eigen::MatrixXd rest_pos);
 	~TimeIntegration();
 
 	void simuExplicit(const Eigen::MatrixXd & pos,
@@ -37,4 +38,8 @@ private:
 
 	double m_t;                   // time step
 	int n_nodes;
+
+	std::vector<int> m_constraints;
+	Eigen::MatrixXd m_rest;
+
 };

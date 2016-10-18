@@ -2,7 +2,7 @@
 
 
 IsotropicMaterial::IsotropicMaterial() :
-m_eps_singularvalue(1e-6), 
+m_eps_singularvalue(1e-8), 
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
 }
@@ -59,7 +59,7 @@ void IsotropicMaterial::computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d 
 	}
 }
 
-void IsotropicMaterial::compouteFhats()
+void IsotropicMaterial::computeFhats()
 {
 	int n = m_tetModel->getTetsNum();
 	Eigen::Matrix3d F, U, V;
@@ -193,6 +193,7 @@ Eigen::MatrixXd IsotropicMaterial::computeDP2DF(int tetID)
 Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats()
 {
 	computeFhatsInvariants();
+	//computeFhats();
 	int n = m_tetModel->getTetsNum();
 	Eigen::Vector3d Phat, Fhat, Fhat_inverseT;
 	double mu, lambda, I3;
@@ -251,7 +252,18 @@ Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats()
 
 Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 {
-	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+
+	// Teran's method
+	//Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+	
+	// Barbic's method
+	double dPdF_buf[81] = { 0.0 }; //a raw array of double
+	Eigen::Map<Eigen::Matrix<double, 9, 9>> dPdF(dPdF_buf);
+	Eigen::Matrix3d U = m_Us.block<3, 3>(0, tetID * 3);
+	Eigen::Matrix3d V = m_Vs.block<3, 3>(0, tetID * 3);
+	Eigen::Vector3d Fhats = m_Fhats.col(tetID);
+	computeDPDF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
+
 	//m_tetModel->writeMatrix("dPdF.csv", dPdF);
 
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
@@ -259,7 +271,6 @@ Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 	dGdF.block<3, 9>(0, 0) = BT * dPdF.block<3, 9>(0, 0);
 	dGdF.block<3, 9>(3, 0) = BT * dPdF.block<3, 9>(3, 0);
 	dGdF.block<3, 9>(6, 0) = BT * dPdF.block<3, 9>(6, 0);
-
 
 	Eigen::Matrix3d DmInvT = m_tetModel->getDmInv(tetID).transpose();
 	Eigen::Vector3d v = -1.0 * DmInvT.rowwise().sum();

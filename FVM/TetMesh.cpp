@@ -34,6 +34,9 @@ void TetMesh::loadNodesFromFile(QString filename)
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
 			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
+
+			if (m_nodes(0, i) == -2.5)
+				m_constraintIDs.push_back(i);
 		}
 
 		m_rest_positions = m_nodes;
@@ -112,13 +115,17 @@ void TetMesh::initModel()
 	//loadTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
 	//loadFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
 
-	loadNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
-	loadTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
-	loadFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+	//loadNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
+	//loadTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
+	//loadFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+
+	loadNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
+	loadTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
+	loadFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	setTetMaterial(100000, 0.45,1000);
+	setTetMaterial(1000000, 0.45,800);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight

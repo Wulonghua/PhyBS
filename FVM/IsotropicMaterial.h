@@ -59,7 +59,7 @@ private:
 	//see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.
 	void computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d &S, Eigen::Matrix3d &U, Eigen::Matrix3d &V);
 	void computeFhatsInvariants();
-	void compouteFhats();
+	void computeFhats();
 
 	// compute dP/dF using [Teran  2005] method
 	Eigen::MatrixXd computeDP2DF(int tetID);
