@@ -453,8 +453,8 @@ void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fh
 		if ((Fhats[0] - Fhats[1] < eps_singularvalue) && (Fhats[1] - Fhats[2] >= eps_singularvalue))
 		{
 			Ftildes[2] = Fhats[2];
-			Ftildes[1] = Fhats[1];
-			Ftildes[0] = Fhats[1] + eps_singularvalue;
+			Ftildes[1] = Fhats[0] - eps_singularvalue;
+			Ftildes[0] = Fhats[0];
 		}
 		else if ((Fhats[0] - Fhats[1] >= eps_singularvalue) && (Fhats[1] - Fhats[2] < eps_singularvalue))
 		{

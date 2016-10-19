@@ -30,6 +30,7 @@ FVM::~FVM()
 void FVM::initSignalSlotConnections()
 {
 	connect(ui.actionLoadConfig, SIGNAL(triggered()), this, SLOT(DoLoadConfig()));
+	connect(ui.actionImportNodes, SIGNAL(triggered()), this, SLOT(DoImportNodes()));
 	connect(ui.actionStep, SIGNAL(triggered()), this, SLOT(DoOneStep()));
 	connect(ui.actionRun, SIGNAL(triggered()), this, SLOT(DoRun()));
 	connect(ui.actionPause, SIGNAL(triggered()), this, SLOT(DoPause()));
@@ -40,6 +41,31 @@ void FVM::initSignalSlotConnections()
 
 void FVM::DoLoadConfig()
 {
+
+}
+
+void FVM::DoImportNodes()
+{
+	QFileDialog *fileDialog = new QFileDialog(this);
+	fileDialog->setWindowTitle(QStringLiteral("Import Nodes Positions"));
+	fileDialog->setNameFilter(QString("Node(*.node)"));
+
+	if (fileDialog->exec() == QDialog::Accepted)
+	{
+		QString nodeFile = fileDialog->selectedFiles()[0];
+		if (nodeFile.isEmpty())
+		{
+			std::cout << "Failed to update nodes' positions." << std::endl;
+			return;
+		}
+		m_tetMesh->updateNodesFromFile(nodeFile);
+		ui.glWidget->update();
+		std::cout << "Nodes' positions updated.";
+	}
+	else
+	{
+		std::cout << "Failed to update nodes' positions." << std::endl;
+	}
 
 }
 
@@ -103,7 +129,8 @@ void FVM::DoOneStep()
 	//std::cout << m_tetMesh->getVelocities() << std::endl;
 
 	//std::cout << std::endl;
-	//QString snap_file = QStringLiteral("torus_%1").arg(++m_frameID) + QStringLiteral(".bmp");
+	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
+	//m_tetMesh->writeNodes(node_file);
 	//ui.glWidget->saveSnapshot(snap_file, true);
 	/***********************************************************************************************/
 	ui.glWidget->update();
@@ -131,14 +158,16 @@ void FVM::DoTest()
 	//m_IsoMaterial->computeInnerForcesfromFhats();
 	//auto m = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << m;
-	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
-	Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-	std::cout << "K: " << std::endl;
-	std::cout << K << std::endl;
+	//Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
+	//std::cout << "K: " << std::endl;
+	//std::cout << K << std::endl;
 
-	Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
-	Eigen::MatrixXd Kt;
-	Kt = Eigen::MatrixXd(gK);
-	std::cout << "Kt: " << std::endl;
-	std::cout << Kt << std::endl;
+	//Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	//Eigen::MatrixXd Kt;
+	//Kt = Eigen::MatrixXd(gK);
+	//std::cout << "Kt: " << std::endl;
+	//std::cout << Kt << std::endl;
+
+	m_tetMesh->writeNodes(QStringLiteral("middle.node"));
 }

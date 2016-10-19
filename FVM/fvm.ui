@@ -73,6 +73,7 @@
    <addaction name="actionStop"/>
    <addaction name="separator"/>
    <addaction name="actionTest"/>
+   <addaction name="actionImportNodes"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionLoadConfig">
@@ -145,6 +146,18 @@
    </property>
    <property name="toolTip">
     <string>test</string>
+   </property>
+  </action>
+  <action name="actionImportNodes">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/import.png</normaloff>:/icon/icon/import.png</iconset>
+   </property>
+   <property name="text">
+    <string>ImportNodes</string>
+   </property>
+   <property name="toolTip">
+    <string>Import Nodes Positions</string>
    </property>
   </action>
  </widget>

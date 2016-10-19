@@ -5,6 +5,7 @@
 #include <qstring.h>
 #include <qtextstream.h>
 #include <qopengl.h>
+#include <qfile.h>
 #include <iostream>
 
 class RenderWidget;
@@ -13,9 +14,11 @@ class TetMesh
 public:
 	TetMesh();
 	~TetMesh();
-	void loadNodesFromFile(QString filename);
-	void loadTetsFromFile(QString filename);
-	void loadFacesFromFile(QString filename);
+	void initNodesFromFile(QString filename);
+	void initTetsFromFile(QString filename);
+	void initFacesFromFile(QString filename);
+	void updateNodesFromFile(QString filename);
+
 	void setTetMaterial(double e, double nu, double den);
 
 	// using the simplest linear isotropic model
@@ -47,6 +50,8 @@ public:
 
 	// for test
 	void writeMatrix(QString file, Eigen::MatrixXd mat);
+	void writeNodes(QString file);
+
 	double fixPrecision(double m);
 
 private:

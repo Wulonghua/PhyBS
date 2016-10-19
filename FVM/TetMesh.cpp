@@ -11,7 +11,7 @@ TetMesh::~TetMesh()
 {
 }
 
-void TetMesh::loadNodesFromFile(QString filename)
+void TetMesh::initNodesFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -29,17 +29,17 @@ void TetMesh::loadNodesFromFile(QString filename)
 		
 		//load nodes' positions
 		int prefix;
-		m_nodes = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_rest_positions = Eigen::MatrixXd::Zero(3, n_nodes);
 
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
-			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
+			fin >> prefix >> m_rest_positions(0, i) >> m_rest_positions(1, i) >> m_rest_positions(2, i);
 
-			if (m_nodes(0, i) == -2.5)
+			if (m_rest_positions(0, i) == -2.5)
 				m_constraintIDs.push_back(i);
 		}
 
-		m_rest_positions = m_nodes;
+		m_nodes = m_rest_positions;
 
 
 		m_nodes_mass = Eigen::VectorXd::Zero(n_nodes);
@@ -51,11 +51,36 @@ void TetMesh::loadNodesFromFile(QString filename)
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
 		//std::cout << m_nodes;
-
 	}
 }
 
-void TetMesh::loadTetsFromFile(QString filename)
+void TetMesh::updateNodesFromFile(QString filename)
+{
+	QFile file(filename);
+	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+	{
+		std::cerr << "Cannot load nodes file." << std::endl;
+		exit(0);
+	}
+
+	QTextStream fin(&file);
+	if (!fin.atEnd())
+	{
+		QString line = fin.readLine().simplified();
+		QStringList segs = line.split(" ");
+		n_nodes = segs[0].toInt();
+
+		//load nodes' positions
+		int prefix;
+
+		for (size_t i = 0; i < n_nodes; ++i)
+		{
+			fin >> prefix >> m_nodes(0, i) >> m_nodes(1, i) >> m_nodes(2, i);
+		}
+	}
+}
+
+void TetMesh::initTetsFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -81,7 +106,7 @@ void TetMesh::loadTetsFromFile(QString filename)
 	}
 }
 
-void TetMesh::loadFacesFromFile(QString filename)
+void TetMesh::initFacesFromFile(QString filename)
 {
 	QFile file(filename);
 	if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
@@ -111,17 +136,17 @@ void TetMesh::loadFacesFromFile(QString filename)
 
 void TetMesh::initModel()
 {
-	//loadNodesFromFile(QStringLiteral("..\\model\\torus\\torus.1.node"));
-	//loadTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
-	//loadFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\torus\\torus.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
 
-	//loadNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
-	//loadTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
-	//loadFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
 
-	loadNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
-	loadTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
-	loadFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
+	initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
@@ -327,4 +352,18 @@ double TetMesh::fixPrecision(double m)
 		return -itg;
 	else
 		return itg;
+}
+
+void TetMesh::writeNodes(QString nodefile)
+{
+	QFile file(nodefile);
+	if (file.open(QIODevice::ReadWrite)) {
+		QTextStream stream(&file);
+		stream << n_nodes << " 3 0 0" << endl;
+		for (size_t i = 0; i < n_nodes; ++i)
+		{
+			stream << i << " " << m_nodes(0, i) << " " << m_nodes(1, i) << " " << m_nodes(2, i) << endl;
+		}
+		file.close();
+	}
 }

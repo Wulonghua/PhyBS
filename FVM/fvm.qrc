@@ -7,5 +7,6 @@
     <file>../icon/run.png</file>
     <file>../icon/stop.png</file>
 	<file>../icon/test.png</file>
+	<file>../icon/import.png</file>
   </qresource>
 </RCC>

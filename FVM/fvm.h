@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include <qtimer.h>
 #include <qlabel.h>
+#include <qfiledialog.h>
 #include <memory>
 
 #include "ui_fvm.h"
@@ -25,6 +26,7 @@ public slots:
 	void DoRun();
 	void DoPause();
 	void DoLoadConfig();
+	void DoImportNodes();   // import nodes' positions.
 	void DoStop();
 	void DoTest();
 

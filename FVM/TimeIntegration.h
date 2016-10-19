@@ -40,6 +40,6 @@ private:
 	int n_nodes;
 
 	std::vector<int> m_constraints;
-	Eigen::MatrixXd m_rest;
+	Eigen::MatrixXd	 m_rest;
 
 };
