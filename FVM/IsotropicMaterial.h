@@ -71,7 +71,7 @@ private:
 
 	// Different method: see [Xu et al. 2015] Section3.2 equation (5)
 	void computeDPDFij(const double *U, const double *Fhat, const double *V, const double *PFhats, const double *hessian, int i, int j, double *dPdFij);
-	void computeDPDF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
+	void computeDP2DF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
 
 	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
 };

@@ -262,9 +262,11 @@ Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 	Eigen::Matrix3d U = m_Us.block<3, 3>(0, tetID * 3);
 	Eigen::Matrix3d V = m_Vs.block<3, 3>(0, tetID * 3);
 	Eigen::Vector3d Fhats = m_Fhats.col(tetID);
-	computeDPDF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
+	computeDP2DF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
 
-	//m_tetModel->writeMatrix("dPdF.csv", dPdF);
+	//test
+	//if (tetID == 241)
+	//	m_tetModel->writeMatrix("dPdF_Barbic241new.csv", dPdF);
 
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
 	Eigen::MatrixXd dGdF(9, 9);
@@ -297,7 +299,7 @@ Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 
 	// test
 	//m_tetModel->writeMatrix("mat.csv", dfdx);
-	return dfdx;
+	return -dfdx;
 }
 
 Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
@@ -311,6 +313,9 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 	for (int i = 0; i < m; ++i)
 	{
 		K = computeStiffnessMatrix(i);
+		//test
+		//if (i == 241)
+		//	m_tetModel->writeMatrix("Barbic241.csv", K);
 		for (int fi = 0; fi < 4; ++fi)
 		{
 			for (int fj = 0; fj < 3; ++fj)
@@ -426,7 +431,7 @@ void IsotropicMaterial::computeDPFhat2DFij(const double *U, const double *V, con
 	}
 }
 
-void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fhats, const double *V, double *dPdF)
+void IsotropicMaterial::computeDP2DF(int tetID, const double *U, const double *Fhats, const double *V, double *dPdF)
 {
 	Eigen::Matrix3d Utilde, Vtilde;
 	Utilde << U[0], U[1], U[2],
@@ -440,6 +445,7 @@ void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fh
 
 	// perturbation: handle degenerated cases: see the paragraph between equation (9) and equation (10)
 	// in paper [Xu et al. 2015]
+	bool isPerturbed = true;
 	double eps_singularvalue = 1e-6;
 	// attention: Fhats are already sorted in descending order.
 	if (Fhats[0] - Fhats[2] < 2 * eps_singularvalue)
@@ -467,20 +473,28 @@ void IsotropicMaterial::computeDPDF(int tetID, const double *U, const double *Fh
 			Ftildes[2] = Fhats[2];
 			Ftildes[1] = Fhats[1];
 			Ftildes[0] = Fhats[0];
+			isPerturbed = false;
 		}
 	}
 
-	Utilde.col(0) *= Ftildes[0];
-	Utilde.col(1) *= Ftildes[1];
-	Utilde.col(2) *= Ftildes[2];
-
-	Eigen::Matrix3d Fnew = Utilde * Vtilde.transpose();
-
-	Eigen::Matrix3d Unew, Vnew;
+	Eigen::Matrix3d Fnew, Unew, Vnew;
 	Eigen::Vector3d  Fhatnew;
 
-	computeSVD33modified(Fnew, Fhatnew, Unew, Vnew);
-
+	if (isPerturbed)
+	{
+		Utilde.col(0) *= Ftildes[0];
+		Utilde.col(1) *= Ftildes[1];
+		Utilde.col(2) *= Ftildes[2];
+		Fnew = Utilde * Vtilde.transpose();
+		computeSVD33modified(Fnew, Fhatnew, Unew, Vnew);
+	}
+	else
+	{
+		for (int i = 0; i < 3;++i)
+			Fhatnew[i] = Fhats[i];
+		Unew = Utilde;
+		Vnew = Vtilde;
+	}
 	//compute PFhat
 	double PFhat[3];
 	computeEnergy2FhatGradient(tetID, Fhatnew.data(), PFhat);

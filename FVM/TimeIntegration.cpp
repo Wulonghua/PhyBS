@@ -70,7 +70,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXd & pos,
 								 Eigen::MatrixXd & K)
 {
 	int n = pos.cols();
-	Eigen::MatrixXd A = -m_t*m_t*K;
+	Eigen::MatrixXd A = m_t*m_t*K;
 	A.diagonal() += m_masses;
 	//std::cout << A << std::endl;
 	pos.resize(3*n,1);
@@ -110,7 +110,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	}
 	
 	int n = pos.cols();
-	Eigen::SparseMatrix<double> A = -m_t*m_t*K;
+	Eigen::SparseMatrix<double> A = m_t*m_t*K;
 	for (int i = 0; i < 3 * n; ++i)
 	{
 		A.coeffRef(i, i) += m_masses(i);
