@@ -36,6 +36,9 @@ private:
 	Eigen::MatrixXd m_velocities; // nodes' velocities after one time step
 	Eigen::VectorXd m_masses;
 
+	double m_dumpingAlpha;
+	double m_dumpingBelta;
+
 	double m_t;                   // time step
 	int n_nodes;
 

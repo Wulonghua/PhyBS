@@ -25,7 +25,7 @@ TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(2e-3)
 }
 
 TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m, std::vector<int> constraints, Eigen::MatrixXd rest_pos) :
-m_t(2e-3), m_constraints(constraints), m_rest(rest_pos)
+m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.05), m_dumpingBelta(0.05)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
@@ -41,9 +41,9 @@ m_t(2e-3), m_constraints(constraints), m_rest(rest_pos)
 
 	for (size_t i = 0; i < m_constraints.size(); ++i)
 	{
-		m_masses[3 * i] = 0;
-		m_masses[3 * i + 1] = 0;
-		m_masses[3 * i + 2] = 0;
+		m_masses[3 * m_constraints[i]] = 1e8;
+		m_masses[3 * m_constraints[i] + 1] = 1e8;
+		m_masses[3 * m_constraints[i] + 2] = 1e8;
 	}
 }
 
@@ -110,10 +110,10 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	}
 	
 	int n = pos.cols();
-	Eigen::SparseMatrix<double> A = m_t*m_t*K;
+	Eigen::SparseMatrix<double> A = (m_dumpingBelta+m_t)*m_t*K;
 	for (int i = 0; i < 3 * n; ++i)
 	{
-		A.coeffRef(i, i) += m_masses(i);
+		A.coeffRef(i, i) += (1+m_t*m_dumpingAlpha)*m_masses(i);
 	}
 	//std::cout << A << std::endl;
 	pos.resize(3 * n, 1);

@@ -132,6 +132,8 @@ void FVM::DoOneStep()
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
 	//m_tetMesh->writeNodes(node_file);
 	//ui.glWidget->saveSnapshot(snap_file, true);
+		//QString snap_file = QStringLiteral("Teran_%1").arg(++m_frameID) + QStringLiteral(".bmp");
+		//ui.glWidget->saveSnapshot(snap_file, true);
 	/***********************************************************************************************/
 	ui.glWidget->update();
 
@@ -163,11 +165,9 @@ void FVM::DoTest()
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
 
-	//Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
-	//Eigen::MatrixXd Kt;
-	//Kt = Eigen::MatrixXd(gK);
-	//std::cout << "Kt: " << std::endl;
-	//std::cout << Kt << std::endl;
-
-	m_tetMesh->writeNodes(QStringLiteral("middle.node"));
+	m_IsoMaterial->computeInnerForcesfromFhats();
+	Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	Eigen::MatrixXd Kt;
+	Kt = Eigen::MatrixXd(gK);
+	m_tetMesh->writeMatrix("Barbic_K.csv",Kt);
 }

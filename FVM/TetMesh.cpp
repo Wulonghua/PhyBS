@@ -140,13 +140,13 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
 
-	//initNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
-	//initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
-	//initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+	initNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
 
-	initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
-	initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
-	initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
