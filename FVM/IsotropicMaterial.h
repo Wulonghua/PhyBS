@@ -10,6 +10,7 @@
 #include <array>
 
 #include "TetMesh.h"
+#include "omp.h"
 
 class IsotropicMaterial
 {
@@ -59,6 +60,7 @@ private:
 	//see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.
 	void computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d &S, Eigen::Matrix3d &U, Eigen::Matrix3d &V);
 	void computeFhatsInvariants();
+	void computeFhatsInvariants(int num_Threads);   // openmp-parallel  
 	void computeFhats();
 
 	// compute dP/dF using [Teran  2005] method
@@ -74,5 +76,7 @@ private:
 	void computeDP2DF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
 
 	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
+
+	int m_numThreads;
 };
 

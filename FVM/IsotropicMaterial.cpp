@@ -3,6 +3,7 @@
 
 IsotropicMaterial::IsotropicMaterial() :
 m_eps_singularvalue(1e-8), 
+m_numThreads(4),
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
 }
@@ -103,6 +104,36 @@ void IsotropicMaterial::computeFhatsInvariants()
 		sigma1sq = Fhat(0)*Fhat(0);
 		sigma2sq = Fhat(1)*Fhat(1);
 		sigma3sq = Fhat(2)*Fhat(2);
+
+		m_Invariants(0, i) = sigma1sq + sigma2sq + sigma3sq;
+		m_Invariants(1, i) = sigma1sq * sigma1sq + sigma2sq * sigma2sq + sigma3sq * sigma3sq;
+		m_Invariants(2, i) = sigma1sq * sigma2sq * sigma3sq;
+	}
+}
+
+void IsotropicMaterial::computeFhatsInvariants(int num_Threads)
+{
+	int n = m_tetModel->getTetsNum();
+
+	omp_set_num_threads(num_Threads);
+	#pragma omp parallel for
+	for (int i = 0; i < n; ++i)
+	{
+		Eigen::Matrix3d F, U, V;
+		Eigen::Vector3d Fhat;
+
+		F = m_tetModel->computeDeformationGradient(i);
+
+		computeSVD33modified(F, Fhat, U, V);
+		m_Fhats.col(i) = Fhat;
+		double t = Fhat[0];
+
+		m_Us.block<3, 3>(0, i * 3) = U;
+		m_Vs.block<3, 3>(0, i * 3) = V;
+
+		double sigma1sq = Fhat(0)*Fhat(0);
+		double sigma2sq = Fhat(1)*Fhat(1);
+		double sigma3sq = Fhat(2)*Fhat(2);
 
 		m_Invariants(0, i) = sigma1sq + sigma2sq + sigma3sq;
 		m_Invariants(1, i) = sigma1sq * sigma1sq + sigma2sq * sigma2sq + sigma3sq * sigma3sq;
