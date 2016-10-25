@@ -30,9 +30,11 @@ public:
 	void computeEnergy2FhatHessian(int tetID, const double *Fhats, double *hessian);
 
 	Eigen::MatrixXd computeInnerForcesfromFhats();
+	Eigen::MatrixXd computeInnerForcesfromFhats(int num_Threads);
 	// compute stiffness Matrix
 	Eigen::MatrixXd computeStiffnessMatrix(int tetID);
 	Eigen::SparseMatrix<double> computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<double> computeGlobalStiffnessMatrix(int num_Threads);
 
 	const double m_eps_singularvalue;
 
@@ -76,7 +78,5 @@ private:
 	void computeDP2DF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
 
 	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
-
-	int m_numThreads;
 };
 

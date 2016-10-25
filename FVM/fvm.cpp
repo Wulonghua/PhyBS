@@ -1,7 +1,7 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent), m_iter(0), m_frameID(0)
+	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(4)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -91,9 +91,9 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
 	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;

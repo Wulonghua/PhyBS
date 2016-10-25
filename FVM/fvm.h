@@ -43,6 +43,8 @@ private:
 
 	int m_iter;
 	int m_frameID;
+
+	int m_numThreads;
 };
 
 #endif // FVM_H

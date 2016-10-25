@@ -3,7 +3,6 @@
 
 IsotropicMaterial::IsotropicMaterial() :
 m_eps_singularvalue(1e-8), 
-m_numThreads(4),
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
 }
@@ -279,25 +278,65 @@ Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats()
 	return m_tetModel->getForces();
 }
 
+Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats(int num_Threads)
+{
+	computeFhatsInvariants(num_Threads);
+	int n = m_tetModel->getTetsNum();
+	m_tetModel->initForcesFromGravity();
+	
+	omp_lock_t lck;
+	omp_init_lock(&lck);
+
+	omp_set_num_threads(num_Threads);
+	#pragma omp parallel for
+	for (int i = 0; i < n; ++i)
+	{
+		Eigen::Vector3d Phat, Fhat, Fhat_inverseT;
+		double mu, lambda, I3;
+		Eigen::Matrix3d P, U, V, forces;
+		// compute First Piola-Kirchhoff stress based on diagonalized F.
+		// Use the equation from SIGGRAPH course note[Sifaki 2012] Page 24
+		Fhat = m_Fhats.col(i);
+		Fhat_inverseT = Fhat.cwiseInverse();
+
+		mu = m_mus[i];
+		lambda = m_lambdas[i];
+		I3 = m_Invariants(2, i);
+
+		Phat = (Fhat - Fhat_inverseT) * mu + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
+
+		// equation 1 in [Teran 04] P = U * Phat * V^T
+		U = m_Us.block<3, 3>(0, 3 * i);
+		V = m_Vs.block<3, 3>(0, 3 * i);
+		P = U * Phat.asDiagonal() * V.transpose();
+
+		forces = P * m_tetModel->getAN(i);
+
+		omp_set_lock(&lck);
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
+		omp_unset_lock(&lck);
+	}
+	return m_tetModel->getForces();
+}
+
 
 
 Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 {
 
 	// Teran's method
-	//Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
+	Eigen::MatrixXd dPdF = computeDP2DF(tetID); // 9*9
 	
 	// Barbic's method
-	double dPdF_buf[81] = { 0.0 }; //a raw array of double
-	Eigen::Map<Eigen::Matrix<double, 9, 9>> dPdF(dPdF_buf);
-	Eigen::Matrix3d U = m_Us.block<3, 3>(0, tetID * 3);
-	Eigen::Matrix3d V = m_Vs.block<3, 3>(0, tetID * 3);
-	Eigen::Vector3d Fhats = m_Fhats.col(tetID);
-	computeDP2DF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
-
-	//test
-	//if (tetID == 241)
-	//	m_tetModel->writeMatrix("dPdF_Barbic241new.csv", dPdF);
+	//double dPdF_buf[81] = { 0.0 }; //a raw array of double
+	//Eigen::Map<Eigen::Matrix<double, 9, 9>> dPdF(dPdF_buf);
+	//Eigen::Matrix3d U = m_Us.block<3, 3>(0, tetID * 3);
+	//Eigen::Matrix3d V = m_Vs.block<3, 3>(0, tetID * 3);
+	//Eigen::Vector3d Fhats = m_Fhats.col(tetID);
+	//computeDP2DF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
 
 	Eigen::Matrix3d BT = m_tetModel->getAN(tetID).transpose();
 	Eigen::MatrixXd dGdF(9, 9);
@@ -344,9 +383,6 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 	for (int i = 0; i < m; ++i)
 	{
 		K = computeStiffnessMatrix(i);
-		//test
-		//if (i == 241)
-		//	m_tetModel->writeMatrix("Barbic241.csv", K);
 		for (int fi = 0; fi < 4; ++fi)
 		{
 			for (int fj = 0; fj < 3; ++fj)
@@ -366,6 +402,48 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 		}
 	}
 
+	return gK;
+}
+
+//OpenMP parallel version
+Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix(int num_Threads)
+{
+	int n = m_tetModel->getNodesNum();
+	int m = m_tetModel->getTetsNum();
+	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+
+	omp_lock_t lck;
+	omp_init_lock(&lck);
+
+	omp_set_num_threads(num_Threads);
+#pragma omp parallel for
+	for (int i = 0; i < m; ++i)
+	{
+
+		Eigen::MatrixXd K;
+		int Ki, Kj, gKi, gKj;
+
+		K = computeStiffnessMatrix(i);
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			for (int fj = 0; fj < 3; ++fj)
+			{
+				Ki = fi * 3 + fj;
+				gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+				for (int ni = 0; ni < 4; ++ni)
+				{
+					for (int nj = 0; nj < 3; ++nj)
+					{
+						Kj = ni * 3 + nj;	
+						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
+						omp_set_lock(&lck);
+						gK.coeffRef(gKi, gKj) += K(Ki, Kj);
+						omp_unset_lock(&lck);
+					}
+				}
+			}
+		}
+	}
 	return gK;
 }
 
