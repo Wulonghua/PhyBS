@@ -144,6 +144,10 @@
   <ItemGroup>
     <ResourceCompile Include="FVM.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\test.frag" />
+    <None Include="shaders\test.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

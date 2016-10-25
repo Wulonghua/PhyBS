@@ -33,6 +33,9 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{d7cc6417-bab0-4d56-ad5e-45b6f413a812}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -99,5 +102,13 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FVM.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\test.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\test.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
