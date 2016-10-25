@@ -1,5 +1,7 @@
 #include "RenderWidget.h"
-
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE  0x809D
+#endif
 
 RenderWidget::RenderWidget(QWidget *parent)
 {
@@ -22,20 +24,46 @@ void RenderWidget::init()
 		std::cerr << "Could not obtain required OpenGL context version";
 		exit(1);
 	}
+}
+
+void RenderWidget::draw()
+{
+	gl_tetmesh->drawTetBoundFace();
+}
+
+void RenderWidget::paintEvent(QPaintEvent *event)
+{
+	Q_UNUSED(event)
+	QPainter painter(this);
+	painter.beginNativePainting();
+	// Save current OpenGL state
+	glPushAttrib(GL_ALL_ATTRIB_BITS);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+
+	// Reset OpenGL parameters
+	glShadeModel(GL_SMOOTH);
+	glEnable(GL_DEPTH_TEST);
+	//glEnable(GL_CULL_FACE);
+	//glCullFace(GL_FRONT);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_MULTISAMPLE);
+	static GLfloat lightPosition[4] = { 3.0, 3.0, 3.0, 1.0 };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
 	glClearColor(1.0, 1.0, 1.0, 1.0);
-	glEnable(GL_LIGHTING);
-	glDisable(GL_POINT_SMOOTH);
-
+	//glDisable(GL_POINT_SMOOTH);
 
 	// Light setup
-	//glDisable(GL_LIGHT0);
 	glEnable(GL_LIGHT1);
 
 	//Light default parameters
-	const GLfloat light_ambient[4] = { 0.3, 0.3, 0.3, 1.0 };
-	const GLfloat light_diffuse[4] = { 0.3, 0.3, 0.3, 1.0 };
-	const GLfloat light_specular[4] = { 0.3, 0.3, 0.3, 1.0 };
+	const GLfloat light_ambient[4] = { 0.1, 0.1, 0.1, 1.0 };
+	const GLfloat light_diffuse[4] = { 0.1, 0.1, 0.1, 1.0 };
+	const GLfloat light_specular[4] = { 0.1, 0.1, 0.1, 1.0 };
 
 	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 0.1f);
 	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.3f);
@@ -43,32 +71,33 @@ void RenderWidget::init()
 	glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
 	glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
-}
 
-void RenderWidget::draw()
-{
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glDisable(GL_LIGHT1);
-	//drawTestCube();
-	gl_tetmesh->drawTetBoundFace();
-}
+	// Classical 3D drawing, usually performed by paintGL().
+	preDraw();
+	draw();
+	postDraw();
+	// Restore OpenGL state
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glPopAttrib();
 
-void RenderWidget::postDraw()
-{
-	renderText2D(10, 30, "FPS: ");
-}
+	painter.endNativePainting();
+	renderText2D(10,30,"FPS: ",&painter);
 
-void RenderWidget::renderText2D(double x, double y, QString text)
-{
-	QPainter painter(this);
-	painter.setPen(Qt::black);
-	painter.setFont(QFont("Helvetica", 20));
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-	painter.drawText(x, y, text); // z = pointT4.z + distOverOp / 4
 	painter.end();
 }
 
-void RenderWidget::renderText3D(double x, double y, double z, QString text)
+void RenderWidget::renderText2D(double x, double y, QString text, QPainter *painter)
+{
+	painter->setPen(Qt::darkCyan);
+	painter->setFont(QFont("Arial", 20));
+	painter->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+	painter->drawText(x, y, text); // z = pointT4.z + distOverOp / 4
+}
+
+void RenderWidget::renderText3D(double x, double y, double z, QString text, QPainter *painter)
 {
 	int width = this->width();
 	int height = this->height();
@@ -84,12 +113,10 @@ void RenderWidget::renderText3D(double x, double y, double z, QString text)
 
 	textPosY = height - textPosY; // y is inverted
 
-	QPainter painter(this);
-	painter.setPen(Qt::black);
-	painter.setFont(QFont("Helvetica", 10));
-	painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-	painter.drawText(textPosX, textPosY, text); // z = pointT4.z + distOverOp / 4
-	painter.end();
+	painter->setPen(Qt::black);
+	painter->setFont(QFont("Helvetica", 10));
+	painter->setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+	painter->drawText(textPosX, textPosY, text); // z = pointT4.z + distOverOp / 4
 }
 
 void RenderWidget::drawTestCube()

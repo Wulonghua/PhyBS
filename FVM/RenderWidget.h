@@ -17,13 +17,15 @@ public:
 	virtual ~RenderWidget();
 
 	void setGLTetMesh(std::shared_ptr<TetMesh> tet) { gl_tetmesh = tet; }
-	void renderText3D(double x, double y, double z, QString text);
-	void renderText2D(double x, double y, QString text);
+	void renderText3D(double x, double y, double z, QString text, QPainter *painter);
+	void renderText2D(double x, double y, QString text, QPainter *painter);
 
 protected:
 	virtual void draw();
-	virtual void postDraw();
 	virtual void init();
+
+	//virtual void paintGL() { update(); }
+	virtual void paintEvent(QPaintEvent *event);
 
 private:
 	void transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4]);
