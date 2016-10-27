@@ -164,13 +164,10 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	{
 		A.coeffRef(i, i) += (1 + m_t*m_dumpingAlpha)*m_masses(i);
 	}
-	//std::cout << A << std::endl;
-	pos.resize(3 * n, 1);
-	vel.resize(3 * n, 1);
-	force.resize(3 * n, 1);
-	Eigen::VectorXd p = pos;
-	Eigen::VectorXd v = vel;
-	Eigen::VectorXd f = force;
+
+	Eigen::Map<Eigen::VectorXd> p(pos.data(), n_nodes * 3);
+	Eigen::Map<Eigen::VectorXd> v(vel.data(), n_nodes * 3);
+	Eigen::Map<Eigen::VectorXd> f(force.data(), n_nodes * 3);
 
 	Eigen::VectorXd b = m_masses.cwiseProduct(v) + m_t * f;
 
@@ -180,11 +177,6 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 
 	p += m_t * v;
 
-	pos = p.matrix();
-	vel = v.matrix();
-	pos.resize(3, n);
-	vel.resize(3, n);
-	force.resize(3, n);
 }
 
 void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)
