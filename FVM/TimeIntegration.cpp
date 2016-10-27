@@ -1,5 +1,8 @@
 #include "TimeIntegration.h"
 
+#define EIGEN_USE_MKL_ALL
+#define EIGEN_VECTORIZE_SSE4_2
+
 
 TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 {
@@ -176,6 +179,8 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 	cg_solver.compute(A);
 	cg_solver.setTolerance(1e-8);
 	v = cg_solver.solve(b);
+	
+	
 	p += m_t * v;
 
 	pos = p.matrix();

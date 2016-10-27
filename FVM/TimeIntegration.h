@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Dense>
 #include <Eigen/IterativeLinearSolvers>
+#include <Eigen/PardisoSupport>
 #include <iostream>
 
 class TimeIntegration
