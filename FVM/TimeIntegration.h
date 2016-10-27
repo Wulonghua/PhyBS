@@ -24,6 +24,12 @@ public:
 		Eigen::MatrixXd & force,
 		Eigen::SparseMatrix<double> & K);
 
+	void BackEuler(Eigen::MatrixXd & pos,
+		Eigen::MatrixXd & restPos,
+		Eigen::MatrixXd & vel,
+		Eigen::MatrixXd & force,
+		Eigen::SparseMatrix<double> & K);
+
 	void setTimeStep(double t) { m_t = t; }
 	Eigen::MatrixXd  getPositions() { return m_positions; }
 	Eigen::MatrixXd  getVelocities() { return m_velocities; }

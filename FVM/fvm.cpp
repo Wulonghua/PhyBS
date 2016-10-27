@@ -1,7 +1,7 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(4)
+	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(2)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -108,7 +108,11 @@ void FVM::DoOneStep()
 
 	//std::cout << std::endl;
 
-	m_integrator->BackEuler(m_tetMesh->getNodes(),
+	//m_integrator->BackEuler(m_tetMesh->getNodes(),
+	//	m_tetMesh->getVelocities(),
+	//	forces, sK);
+
+	m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
 		m_tetMesh->getVelocities(),
 		forces, sK);
 

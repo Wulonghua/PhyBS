@@ -108,7 +108,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 		vel.col(m_constraints[i]) = Eigen::Vector3d::Zero();
 		force.col(m_constraints[i]) = Eigen::Vector3d::Zero();
 	}
-	
+
 	int n = pos.cols();
 	Eigen::SparseMatrix<double> A = (m_dumpingBelta+m_t)*m_t*K;
 	for (int i = 0; i < 3 * n; ++i)
@@ -142,6 +142,47 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 		pos.col(m_constraints[i]) = m_rest.col(m_constraints[i]);
 	}
 	//addGroundConstraints(-1.0, pos, vel);
+}
+
+void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
+	Eigen::MatrixXd & restPos,
+	Eigen::MatrixXd & vel,
+	Eigen::MatrixXd & force,
+	Eigen::SparseMatrix<double> & K)
+{
+	for (int i = 0; i < m_constraints.size(); ++i)
+	{
+			force.col(m_constraints[i]) = Eigen::Vector3d::Zero();
+			force.col(m_constraints[i]) += 1e8 * (restPos.col(m_constraints[i]) - pos.col(m_constraints[i]));
+	}
+
+	int n = pos.cols();
+	Eigen::SparseMatrix<double> A = (m_dumpingBelta + m_t)*m_t*K;
+	for (int i = 0; i < 3 * n; ++i)
+	{
+		A.coeffRef(i, i) += (1 + m_t*m_dumpingAlpha)*m_masses(i);
+	}
+	//std::cout << A << std::endl;
+	pos.resize(3 * n, 1);
+	vel.resize(3 * n, 1);
+	force.resize(3 * n, 1);
+	Eigen::VectorXd p = pos;
+	Eigen::VectorXd v = vel;
+	Eigen::VectorXd f = force;
+
+	Eigen::VectorXd b = m_masses.cwiseProduct(v) + m_t * f;
+
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> cg_solver;
+	cg_solver.compute(A);
+	cg_solver.setTolerance(1e-8);
+	v = cg_solver.solve(b);
+	p += m_t * v;
+
+	pos = p.matrix();
+	vel = v.matrix();
+	pos.resize(3, n);
+	vel.resize(3, n);
+	force.resize(3, n);
 }
 
 void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)
