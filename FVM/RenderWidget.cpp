@@ -3,7 +3,7 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-RenderWidget::RenderWidget(QWidget *parent)
+RenderWidget::RenderWidget(QWidget *parent) : m_fps(0)
 {
 
 }
@@ -30,6 +30,7 @@ void RenderWidget::draw()
 {
 	gl_tetmesh->drawTetBoundFace();
 }
+
 
 void RenderWidget::paintEvent(QPaintEvent *event)
 {
@@ -84,7 +85,10 @@ void RenderWidget::paintEvent(QPaintEvent *event)
 	glPopAttrib();
 
 	painter.endNativePainting();
-	renderText2D(10,30,"FPS: ",&painter);
+
+	int elapse = m_time.restart();
+	m_fps = elapse > 0 ? 1000 / elapse : 60;
+	renderText2D(10,30,QStringLiteral("FPS: %1").arg(m_fps),&painter);
 
 	painter.end();
 }

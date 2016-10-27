@@ -3,6 +3,7 @@
 #include "QGLViewer\qglviewer.h"
 #include "qopenglfunctions_4_5_core.h"
 #include "qopenglcontext.h"
+#include <QTime>
 #include "TetMesh.h"
 
 
@@ -19,6 +20,8 @@ public:
 	void setGLTetMesh(std::shared_ptr<TetMesh> tet) { gl_tetmesh = tet; }
 	void renderText3D(double x, double y, double z, QString text, QPainter *painter);
 	void renderText2D(double x, double y, QString text, QPainter *painter);
+	void restartTime() { m_time.restart(); }
+	void startTime() { m_time.start(); };
 
 protected:
 	virtual void draw();
@@ -38,6 +41,9 @@ private:
 
 	QOpenGLFunctions_4_5_Core *render;    // reserve for modern glsl rendering
 	std::shared_ptr<TetMesh> gl_tetmesh;
+
+	QTime m_time;
+	int m_fps;
 };
 
 inline void RenderWidget::transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4])

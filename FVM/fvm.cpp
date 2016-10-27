@@ -9,6 +9,7 @@ FVM::FVM(QWidget *parent)
 	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),
 		m_tetMesh->getMasses(),m_tetMesh->getConstraintIDs(),m_tetMesh->getRestPosition());
 	ui.glWidget->setGLTetMesh(m_tetMesh);
+	ui.glWidget->startTime();
 	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
 
 	m_statusLabel = new QLabel(this);
@@ -71,6 +72,7 @@ void FVM::DoImportNodes()
 
 void FVM::DoOneStep()
 {
+	ui.glWidget->restartTime();
 	/************************linear model using explicit time integration*****************************/
 	//if (m_iter++ < 10000)
 	//{
