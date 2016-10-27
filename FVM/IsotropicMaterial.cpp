@@ -1,6 +1,5 @@
 ﻿#include "IsotropicMaterial.h"
 
-
 IsotropicMaterial::IsotropicMaterial() :
 m_eps_singularvalue(1e-8), 
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11

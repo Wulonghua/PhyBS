@@ -3,7 +3,6 @@
 #define EIGEN_USE_MKL_ALL
 #define EIGEN_VECTORIZE_SSE4_2
 
-
 TimeIntegration::TimeIntegration(int num_nodes) : m_t(1e-6)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
@@ -175,12 +174,10 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 
 	Eigen::VectorXd b = m_masses.cwiseProduct(v) + m_t * f;
 
-	Eigen::ConjugateGradient<Eigen::SparseMatrix<double>> cg_solver;
-	cg_solver.compute(A);
-	cg_solver.setTolerance(1e-8);
-	v = cg_solver.solve(b);
-	
-	
+	Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> pardiso_solver;
+	pardiso_solver.compute(A);
+	v = pardiso_solver.solve(b);
+
 	p += m_t * v;
 
 	pos = p.matrix();
