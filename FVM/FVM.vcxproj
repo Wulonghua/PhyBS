@@ -52,7 +52,7 @@
       <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtUiTools;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtXml;$(SolutionDir)\3rd\QGLViewer\2.6.3.w\include;$(SolutionDir)\3rd\eigen;$(INTEL_LIBDIR)\mkl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Disabled</Optimization>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
@@ -70,7 +70,7 @@
       <PreprocessorDefinitions>UNICODE;WIN32;WIN64;QT_DLL;QT_NO_DEBUG;NDEBUG;QT_CORE_LIB;QT_GUI_LIB;QT_OPENGL_LIB;QT_UITOOLS_LIB;QT_WIDGETS_LIB;QT_XML_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>.\GeneratedFiles;.;$(QTDIR)\include;.\GeneratedFiles\$(ConfigurationName);$(QTDIR)\include\QtCore;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtOpenGL;$(QTDIR)\include\QtUiTools;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtXml;$(SolutionDir)\3rd\QGLViewer\2.6.3.w\include;$(SolutionDir)\3rd\eigen;$(INTEL_LIBDIR)\mkl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat />
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>

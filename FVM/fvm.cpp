@@ -170,10 +170,24 @@ void FVM::DoTest()
 	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
+	//int elapse;
 
-	m_IsoMaterial->computeInnerForcesfromFhats();
-	Eigen::SparseMatrix<double> gK = m_IsoMaterial->computeGlobalStiffnessMatrix();
-	Eigen::MatrixXd Kt;
-	Kt = Eigen::MatrixXd(gK);
-	m_tetMesh->writeMatrix("Barbic_K.csv",Kt);
+	//ui.glWidget->restartTime();
+	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+
+	//elapse = ui.glWidget->restartTime();
+	//std::cout << "time to compute force: " << elapse << std::endl;
+
+
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+
+	//elapse = ui.glWidget->restartTime();
+	//std::cout << "time to compute K: " << elapse << std::endl;
+
+	m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+		m_tetMesh->getVelocities(),
+		forces, sK);
+	//elapse = ui.glWidget->restartTime();
+	//std::cout << "time to solve the system: " << elapse << std::endl;
+	ui.glWidget->update();
 }

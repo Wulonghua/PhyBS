@@ -17,7 +17,7 @@ RenderWidget::~RenderWidget()
 void RenderWidget::init()
 {
 	restoreStateFromFile();
-	this->setSceneRadius(0.5);
+	this->setSceneRadius(5);
 
 	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
 	if (!render) {

@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <array>
+#include <QTime>
 
 #include "TetMesh.h"
 #include "omp.h"
@@ -78,5 +79,7 @@ private:
 	void computeDP2DF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
 
 	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
+
+	QTime m_timeTest;
 };
 
