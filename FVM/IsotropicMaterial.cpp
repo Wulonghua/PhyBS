@@ -378,9 +378,9 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	int m = m_tetModel->getTetsNum();
 	int gKi, gKj;
 
-	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
-	if (n >= 10)
-		gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
+	m_globalK.resize(3*n,3*n);
+	//if (n >= 10)
+	//	gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
 	m_reserveSize.reserve(3 * n);
 
 	for (int i = 0; i < m; ++i)
@@ -396,7 +396,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 					for (int nj = 0; nj < 3; ++nj)
 					{
 						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
-						gK.coeffRef(gKi, gKj) = 1;
+						m_globalK.coeffRef(gKi, gKj) += 1;
 					}
 				}
 			}
@@ -404,7 +404,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	}
 
 	for (int i = 0; i < 3 * n; ++i)
-		m_reserveSize.push_back(gK.col(i).sum());
+		m_reserveSize.push_back(m_globalK.col(i).sum());
 }
 
 Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
@@ -412,10 +412,9 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
 
-	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
-	//if (n>=10)
-	//gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
-	gK.reserve(m_reserveSize);
+	//Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+	//gK.reserve(m_reserveSize);
+	Eigen::SparseMatrix<double> gK = m_globalK;
 	Eigen::MatrixXd K;
 	int Ki, Kj, gKi, gKj;
 	//m_timeTest.restart();
@@ -441,7 +440,7 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 					{
 						Kj = ni * 3 + nj;
 						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
-						gK.coeffRef(gKi, gKj) += K(Ki, Kj);
+						gK.coeffRef(gKi, gKj) += K(Ki, Kj)-1;
 					}
 				}
 			}
@@ -451,7 +450,6 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 
 	//std::cout << "time to compute all elements' K: " << t_K << std::endl;
 	//std::cout << "time to construct global K: " << t_globalK << std::endl;
-	gK.makeCompressed();
 	return gK;
 }
 
@@ -460,9 +458,7 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix(int 
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
-	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
-	if (n >= 10)
-		gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
+	Eigen::SparseMatrix<double> gK = m_globalK;
 
 	//omp_lock_t lck;
 	//omp_init_lock(&lck);
@@ -488,8 +484,10 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix(int 
 						Kj = ni * 3 + nj;	
 						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
 						//omp_set_lock(&lck);
-						#pragma omp critical
-						gK.coeffRef(gKi, gKj) += K(Ki, Kj);
+						#pragma omp atomic
+						// trick here: why minus 1? because to reserve the space for non-zero entry, 
+						// I added 1 to each entry when creating the initial global stiffness matrix.
+						gK.coeffRef(gKi, gKj) += K(Ki, Kj) - 1;
 						//omp_unset_lock(&lck);
 					}
 				}

@@ -3,7 +3,7 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-RenderWidget::RenderWidget(QWidget *parent) : m_fps(0)
+RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(5)
 {
 
 }
@@ -87,7 +87,15 @@ void RenderWidget::paintEvent(QPaintEvent *event)
 	painter.endNativePainting();
 
 	int elapse = m_time.restart();
-	m_fps = elapse > 0 ? 1000 / elapse : 60;
+
+	m_elapses += elapse;
+	if (++m_iter >= m_iterMax)
+	{
+		m_fps = m_elapses > 0 ? 1000 * m_iterMax / m_elapses : 60;
+		m_iter = 0;
+		m_elapses = 0;
+	}
+	
 	renderText2D(10,30,QStringLiteral("FPS: %1").arg(m_fps),&painter);
 
 	painter.end();

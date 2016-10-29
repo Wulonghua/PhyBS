@@ -1,7 +1,7 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(2)
+	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(4)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -95,7 +95,7 @@ void FVM::DoOneStep()
 	/******************************Back Euler integration**********************************/
 	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
 	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;
@@ -170,24 +170,24 @@ void FVM::DoTest()
 	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
-	//int elapse;
+	int elapse;
 
-	//ui.glWidget->restartTime();
+	ui.glWidget->restartTime();
 	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
 
-	//elapse = ui.glWidget->restartTime();
-	//std::cout << "time to compute force: " << elapse << std::endl;
+	elapse = ui.glWidget->restartTime();
+	std::cout << "time to compute force: " << elapse << std::endl;
 
 
 	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
 
-	//elapse = ui.glWidget->restartTime();
-	//std::cout << "time to compute K: " << elapse << std::endl;
+	elapse = ui.glWidget->restartTime();
+	std::cout << "time to compute K: " << elapse << std::endl;
 
 	m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
 		m_tetMesh->getVelocities(),
 		forces, sK);
-	//elapse = ui.glWidget->restartTime();
-	//std::cout << "time to solve the system: " << elapse << std::endl;
+	elapse = ui.glWidget->restartTime();
+	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
 }

@@ -53,6 +53,7 @@ protected:
 
 	void allocateGlobalStiffnessMatrix();
 	std::vector<int> m_reserveSize;
+	Eigen::SparseMatrix<double> m_globalK;
 
 	std::vector<double> m_mus;
 	std::vector<double> m_lambdas;

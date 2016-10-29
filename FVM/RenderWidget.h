@@ -44,6 +44,9 @@ private:
 
 	QTime m_time;
 	int m_fps;
+	int m_elapses;
+	int m_iter;
+	const int m_iterMax;
 };
 
 inline void RenderWidget::transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4])
