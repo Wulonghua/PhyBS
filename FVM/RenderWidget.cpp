@@ -3,7 +3,7 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(5)
+RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10)
 {
 
 }
@@ -20,7 +20,8 @@ void RenderWidget::init()
 	this->setSceneRadius(5);
 
 	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
-	if (!render) {
+	if (!render)
+	{
 		std::cerr << "Could not obtain required OpenGL context version";
 		exit(1);
 	}

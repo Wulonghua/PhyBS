@@ -3,7 +3,7 @@
 #include "QGLViewer\qglviewer.h"
 #include "qopenglfunctions_4_5_core.h"
 #include "qopenglcontext.h"
-#include <QTime>
+#include <QElapsedTimer>
 #include "TetMesh.h"
 
 
@@ -42,7 +42,7 @@ private:
 	QOpenGLFunctions_4_5_Core *render;    // reserve for modern glsl rendering
 	std::shared_ptr<TetMesh> gl_tetmesh;
 
-	QTime m_time;
+	QElapsedTimer m_time;
 	int m_fps;
 	int m_elapses;
 	int m_iter;
