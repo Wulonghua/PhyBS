@@ -19,6 +19,7 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 	std::fill(m_lambdas.begin(), m_lambdas.end(), lambda);
 
 	m_tetModel = tetMesh;
+	allocateGlobalStiffnessMatrix();
 	std::cout << "Isotrpic Neo-hookean Material initialized."<<std::endl;
 }
 

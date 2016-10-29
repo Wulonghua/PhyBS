@@ -95,7 +95,7 @@ void FVM::DoOneStep()
 	/******************************Back Euler integration**********************************/
 	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
 	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;

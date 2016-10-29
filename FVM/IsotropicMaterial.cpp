@@ -4,7 +4,7 @@ IsotropicMaterial::IsotropicMaterial() :
 m_eps_singularvalue(1e-8), 
 m_matrix33fromTeran({ { 0, 3, 5, 4, 1, 7, 6, 8, 2 } }) // compromised way to initialize: VS2013 does not fully support c++11
 {
-	m_timeTest.start();
+	//m_timeTest.start();
 }
 
 
@@ -372,24 +372,62 @@ Eigen::MatrixXd IsotropicMaterial::computeStiffnessMatrix(int tetID)
 	return -dfdx;
 }
 
+void IsotropicMaterial::allocateGlobalStiffnessMatrix()
+{
+	int n = m_tetModel->getNodesNum();
+	int m = m_tetModel->getTetsNum();
+	int gKi, gKj;
+
+	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+	if (n >= 10)
+		gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
+	m_reserveSize.reserve(3 * n);
+
+	for (int i = 0; i < m; ++i)
+	{
+
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			for (int fj = 0; fj < 3; ++fj)
+			{
+				gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+				for (int ni = 0; ni < 4; ++ni)
+				{
+					for (int nj = 0; nj < 3; ++nj)
+					{
+						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
+						gK.coeffRef(gKi, gKj) = 1;
+					}
+				}
+			}
+		}
+	}
+
+	for (int i = 0; i < 3 * n; ++i)
+		m_reserveSize.push_back(gK.col(i).sum());
+}
+
 Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
+
 	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+	//if (n>=10)
+	//gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
+	gK.reserve(m_reserveSize);
 	Eigen::MatrixXd K;
 	int Ki, Kj, gKi, gKj;
+	//m_timeTest.restart();
 
-	m_timeTest.restart();
-
-	double t_K=0;
-	double t_globalK=0;
+	//double t_K=0;
+	//double t_globalK=0;
 
 	for (int i = 0; i < m; ++i)
 	{
-		m_timeTest.restart();
+		//m_timeTest.restart();
 		K = computeStiffnessMatrix(i);
-		t_K += m_timeTest.restart();
+		//t_K += m_timeTest.restart();
 		
 		for (int fi = 0; fi < 4; ++fi)
 		{
@@ -408,11 +446,12 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix()
 				}
 			}
 		}
-		t_globalK += m_timeTest.restart();
+		//t_globalK += m_timeTest.restart();
 	}
 
-	std::cout << "time to compute all elements' K: " << t_K << std::endl;
-	std::cout << "time to construct global K: " << t_globalK << std::endl;
+	//std::cout << "time to compute all elements' K: " << t_K << std::endl;
+	//std::cout << "time to construct global K: " << t_globalK << std::endl;
+	gK.makeCompressed();
 	return gK;
 }
 
@@ -422,6 +461,8 @@ Eigen::SparseMatrix<double> IsotropicMaterial::computeGlobalStiffnessMatrix(int 
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
 	Eigen::SparseMatrix<double> gK(3 * n, 3 * n);
+	if (n >= 10)
+		gK.reserve(Eigen::VectorXd::Constant(3 * n, 120));
 
 	//omp_lock_t lck;
 	//omp_init_lock(&lck);

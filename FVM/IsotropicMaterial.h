@@ -51,6 +51,9 @@ protected:
 	virtual double ddgEnergy(double x, const double & mu, const double & lambda) = 0;
 	virtual double ddhEnergy(double x, const double & mu, const double & lambda) = 0;
 
+	void allocateGlobalStiffnessMatrix();
+	std::vector<int> m_reserveSize;
+
 	std::vector<double> m_mus;
 	std::vector<double> m_lambdas;
 	std::shared_ptr<TetMesh> m_tetModel;
@@ -80,6 +83,8 @@ private:
 
 	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
 
+
+	//for test
 	QTime m_timeTest;
 };
 
