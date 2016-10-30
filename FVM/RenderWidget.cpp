@@ -3,7 +3,7 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10)
+RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10), m_picked(false)
 {
 
 }
@@ -29,13 +29,15 @@ void RenderWidget::init()
 
 void RenderWidget::draw()
 {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	gl_tetmesh->drawTetBoundFace();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 
-void RenderWidget::paintEvent(QPaintEvent *event)
+void RenderWidget::paintEvent(QPaintEvent *e)
 {
-	Q_UNUSED(event)
+	Q_UNUSED(e)
 	QPainter painter(this);
 	painter.beginNativePainting();
 	// Save current OpenGL state
@@ -100,6 +102,57 @@ void RenderWidget::paintEvent(QPaintEvent *event)
 	renderText2D(10,30,QStringLiteral("FPS: %1").arg(m_fps),&painter);
 
 	painter.end();
+}
+
+void RenderWidget::mousePressEvent(QMouseEvent *e)
+{
+
+	if ((e->button()==Qt::LeftButton) && (e->modifiers()==Qt::ControlModifier))
+	{
+		qglviewer::Vec orig;
+		QPoint p;
+		Eigen::Vector3d origin, direction, endp;
+
+		//std::cout << "width: " << this->width() << std::endl;
+		//std::cout << "height: " << this->height() << std::endl;
+		//std::cout << "x: " << e->localPos().x() << std::endl;
+		//std::cout << "y: " << e->localPos().y() << std::endl;
+	
+		double matModelView[16], matProjection[16];
+		int viewport[4];
+
+		// get matrix and viewport:
+		glGetDoublev(GL_MODELVIEW_MATRIX, matModelView);
+		glGetDoublev(GL_PROJECTION_MATRIX, matProjection);
+		glGetIntegerv(GL_VIEWPORT, viewport);
+
+		// window pos of mouse, Y is inverted on Windows
+		double winX = e->pos().x();
+		double winY = viewport[3] - e->pos().y();
+
+		// get point on the 'far' plane (third param is set to 1.0)
+		gluUnProject(winX, winY, 1.0, matModelView, matProjection,
+			viewport, &endp[0], &endp[1], &endp[2]);
+
+		orig = camera()->position();
+		
+		origin << orig.x, orig.y, orig.z;
+		direction = (endp - origin).normalized();
+
+		std::cout << "picked: "<<gl_tetmesh->pickFacebyRay(origin, direction)<<std::endl;
+
+		
+		std::cout << "orig: " << orig.x << ","<< orig.y<< "," << orig.z << std::endl;
+		std::cout << "dir: " << direction[0] << "," << direction[1] << "," << direction[2] << std::endl;
+		
+
+	}
+	else
+	{
+		QGLViewer::mousePressEvent(e);
+	}
+
+
 }
 
 void RenderWidget::renderText2D(double x, double y, QString text, QPainter *painter)

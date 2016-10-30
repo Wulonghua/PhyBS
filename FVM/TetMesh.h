@@ -39,6 +39,7 @@ public:
 	int getTetsNum() { return n_tets; }
 	double getE() { return m_E; }
 	double getNu() { return m_nu; }
+	Eigen::Vector3d getFaceCenter(int i) { return m_face_centers.col(i); }
 	Eigen::Matrix3d getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
 	Eigen::Matrix3d getDmInv(int tetID) { return m_Dm_inverses.block<3, 3>(0, 3 * tetID); }
 	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
@@ -47,6 +48,10 @@ public:
 	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}
 	void addNodeForce(int nodeID, Eigen::Vector3d const &force) { m_nodes_forces.col(nodeID) += force; }
 	void initForcesFromGravity() { m_nodes_forces = m_nodes_gravity; }
+
+	// approximate method, shoot the ray and test the center of each face, if it is within certain distance
+	// then the face is chosen.
+	int pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &direct);
 
 	// for test
 	void writeMatrix(QString file, Eigen::MatrixXd mat);
@@ -67,7 +72,7 @@ private:
 
 	Eigen::MatrixXi m_bound_faces;		// the surfaces' indices of tet-mesh's boundary.
 	Eigen::MatrixXd m_bound_normals;    // the surfaces' normals.
-
+	Eigen::MatrixXd m_face_centers;
 
 	Eigen::MatrixXd m_Dm_inverses;
 	Eigen::MatrixXd m_ANs;
@@ -88,4 +93,5 @@ private:
 	int n_nodes;
 	int n_tets;
 	int n_bound_faces;
+
 };

@@ -125,6 +125,7 @@ void TetMesh::initFacesFromFile(QString filename)
 		QStringList segs = line.split(" ");
 		n_bound_faces = segs[0].toInt();
 		m_bound_normals = Eigen::MatrixXd::Zero(3,n_bound_faces);
+		m_face_centers = Eigen::MatrixXd::Zero(3,n_bound_faces);
 
 		//load Tets' indices
 		int prefix;
@@ -285,7 +286,39 @@ void TetMesh::computeBoundfaceNormals()
 		v1 = m_nodes.col(m_bound_faces(1, i)) - m_nodes.col(m_bound_faces(0, i));
 		v2 = m_nodes.col(m_bound_faces(2, i)) - m_nodes.col(m_bound_faces(0, i));
 		m_bound_normals.col(i) = v2.cross(v1).normalized();
+
+		m_face_centers.col(i) = (m_nodes.col(m_bound_faces(0, i))
+								+m_nodes.col(m_bound_faces(1, i))
+								+m_nodes.col(m_bound_faces(0, i)))/3.0;
 	}
+}
+
+int TetMesh::pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &direct)
+{
+	double max_distance = 1e8;
+	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	double r2 = r*r;
+	double d2,a,b;
+	Eigen::Vector3d o_v;
+	int pickID = -1;
+
+	for (int i = 0; i < n_bound_faces; ++i)
+	{
+		if (m_bound_normals.col(i).dot(direct) < 0)
+		{
+			Eigen::Vector3d tmp = m_face_centers.col(i);
+			o_v = orig - m_face_centers.col(i);
+			a = o_v.dot(o_v);
+			b = o_v.dot(direct);
+			d2 = a - b*b;
+			if (d2 < r2)
+			{
+				pickID = i;
+				break;
+			}
+		}
+	}
+	return pickID;
 }
 
 void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel)

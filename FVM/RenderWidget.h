@@ -4,6 +4,8 @@
 #include "qopenglfunctions_4_5_core.h"
 #include "qopenglcontext.h"
 #include <QElapsedTimer>
+#include <QMouseEvent>
+#include <QKeyEvent>
 #include "TetMesh.h"
 
 
@@ -28,7 +30,8 @@ protected:
 	virtual void init();
 
 	//virtual void paintGL() { update(); }
-	virtual void paintEvent(QPaintEvent *event);
+	virtual void paintEvent(QPaintEvent *e);
+	virtual void mousePressEvent(QMouseEvent *e);
 
 private:
 	void transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4]);
@@ -47,6 +50,9 @@ private:
 	int m_elapses;
 	int m_iter;
 	const int m_iterMax;
+
+	bool m_picked;
+
 };
 
 inline void RenderWidget::transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4])
