@@ -32,6 +32,8 @@ protected:
 	//virtual void paintGL() { update(); }
 	virtual void paintEvent(QPaintEvent *e);
 	virtual void mousePressEvent(QMouseEvent *e);
+	virtual void mouseMoveEvent(QMouseEvent *e);
+	virtual void mouseReleaseEvent(QMouseEvent *e);
 
 private:
 	void transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4]);
@@ -51,8 +53,18 @@ private:
 	int m_iter;
 	const int m_iterMax;
 
-	bool m_picked;
+	double m_ModelView[16];
+	double m_Projection[16];
+	int m_viewport[4];
+	Eigen::Map<Eigen::Matrix<double,4,4>> m_matModelView;
+	Eigen::Map<Eigen::Matrix<double, 4, 4>> m_matProjection;
+	//Eigen::Matrix4d m_matModelViewInverse;
+	//Eigen::Matrix4d m_matProjectionInverse;
 
+	bool m_picked;
+	int m_picki;
+	Eigen::Vector3d m_line_end1;
+	Eigen::Vector3d m_line_end2;
 };
 
 inline void RenderWidget::transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4])

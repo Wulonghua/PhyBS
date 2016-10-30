@@ -3,7 +3,9 @@
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-RenderWidget::RenderWidget(QWidget *parent) : m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10), m_picked(false)
+RenderWidget::RenderWidget(QWidget *parent) :
+m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10), m_picked(false),
+m_matModelView(m_ModelView), m_matProjection(m_Projection)
 {
 
 }
@@ -17,7 +19,7 @@ RenderWidget::~RenderWidget()
 void RenderWidget::init()
 {
 	restoreStateFromFile();
-	this->setSceneRadius(5);
+	this->setSceneRadius(2);
 
 	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
 	if (!render)
@@ -29,9 +31,19 @@ void RenderWidget::init()
 
 void RenderWidget::draw()
 {
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	gl_tetmesh->drawTetBoundFace();
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	if (m_picked)
+	{
+		glColor3d(1, 0, 0);
+		glBegin(GL_LINES);
+		glVertex3dv(m_line_end1.data());
+		glVertex3dv(m_line_end2.data());
+		glEnd();
+	}
+		
 }
 
 
@@ -106,53 +118,89 @@ void RenderWidget::paintEvent(QPaintEvent *e)
 
 void RenderWidget::mousePressEvent(QMouseEvent *e)
 {
-
+	
 	if ((e->button()==Qt::LeftButton) && (e->modifiers()==Qt::ControlModifier))
 	{
-		qglviewer::Vec orig;
-		QPoint p;
-		Eigen::Vector3d origin, direction, endp;
+		qglviewer::Vec orig,dir;
+		Eigen::Vector3d origin, direction, endp1,endp2;
 
-		//std::cout << "width: " << this->width() << std::endl;
-		//std::cout << "height: " << this->height() << std::endl;
-		//std::cout << "x: " << e->localPos().x() << std::endl;
-		//std::cout << "y: " << e->localPos().y() << std::endl;
-	
-		double matModelView[16], matProjection[16];
-		int viewport[4];
+		camera()->getModelViewMatrix(m_ModelView);
+		camera()->getProjectionMatrix(m_Projection);
+		camera()->getViewport(m_viewport);
 
-		// get matrix and viewport:
-		glGetDoublev(GL_MODELVIEW_MATRIX, matModelView);
-		glGetDoublev(GL_PROJECTION_MATRIX, matProjection);
-		glGetIntegerv(GL_VIEWPORT, viewport);
+		//std::cout << "model view: " << m_matModelView << std::endl;
+		//std::cout << "project : " << m_matProjection << std::endl;
+
+		//std::cout << "width and height: "<< width() << " " << height()<<std::endl;
+		//std::cout << "point: " << e->pos().x() << " " << e->pos().y() << std::endl;
 
 		// window pos of mouse, Y is inverted on Windows
 		double winX = e->pos().x();
-		double winY = viewport[3] - e->pos().y();
+		double winY = e->pos().y();
 
-		// get point on the 'far' plane (third param is set to 1.0)
-		gluUnProject(winX, winY, 1.0, matModelView, matProjection,
-			viewport, &endp[0], &endp[1], &endp[2]);
+		// get point on the 'near' plane 
+		gluUnProject(winX, winY, 0.0, m_ModelView, m_Projection,
+		             m_viewport, &endp1[0], &endp1[1], &endp1[2]);
 
+		gluUnProject(winX, winY, 1.0, m_ModelView, m_Projection, m_viewport, &endp2[0], &endp2[1], &endp2[2]);
+	
 		orig = camera()->position();
-		
+		//camera()->convertClickToLine(e->pos(), orig, dir);
 		origin << orig.x, orig.y, orig.z;
-		direction = (endp - origin).normalized();
+		//direction << dir.x, dir.y, dir.z;
+		direction = (endp2 - endp1).normalized();
+		m_picki = gl_tetmesh->pickFacebyRay(origin, direction);
+		std::cout << "picked: "<< m_picki <<std::endl;
 
-		std::cout << "picked: "<<gl_tetmesh->pickFacebyRay(origin, direction)<<std::endl;
+		if (m_picki > -1)
+		{
+			//m_line_end1 = origin;
+			//m_line_end2 = origin + 20 * direction;
+			m_line_end1 = gl_tetmesh->getFaceCenter(m_picki);
+			m_line_end2 = m_line_end1;
+			m_picked = true;
+		}
 
-		
-		std::cout << "orig: " << orig.x << ","<< orig.y<< "," << orig.z << std::endl;
-		std::cout << "dir: " << direction[0] << "," << direction[1] << "," << direction[2] << std::endl;
-		
-
+		//std::cout << "orig: " << orig.x << ","<< orig.y<< "," << orig.z << std::endl;
+		//std::cout << "dir: " << direction[0] << "," << direction[1] << "," << direction[2] << std::endl;
 	}
 	else
 	{
 		QGLViewer::mousePressEvent(e);
 	}
+}
 
+void RenderWidget::mouseMoveEvent(QMouseEvent *e)
+{
+	if (m_picked)
+	{
+		Eigen::Vector3d A2= gl_tetmesh->getFaceCenter(m_picki);
+		qglviewer::Vec qA2(A2[0], A2[1], A2[2]);
+		//qglviewer::Vec qA1 = camera()->cameraCoordinatesOf(qA2);
+		qglviewer::Vec qa = camera()->projectedCoordinatesOf(qA2);
+		qglviewer::Vec qb;
+		qb.x = e->pos().x();
+		qb.y = e->pos().y();
+		qb.z = qa.z;
+		qglviewer::Vec qB2 = camera()->unprojectedCoordinatesOf(qb);
+		m_line_end2[0] = qB2.x;
+		m_line_end2[1] = qB2.y;
+		m_line_end2[2] = qB2.z;
+	}
+	else
+	{
+		QGLViewer::mouseMoveEvent(e);
+	}
+	update();
+}
 
+void RenderWidget::mouseReleaseEvent(QMouseEvent *e)
+{
+	if (m_picked)
+	{
+		m_picked = false;
+	}
+	QGLViewer::mouseReleaseEvent(e);
 }
 
 void RenderWidget::renderText2D(double x, double y, QString text, QPainter *painter)

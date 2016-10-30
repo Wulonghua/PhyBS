@@ -289,7 +289,7 @@ void TetMesh::computeBoundfaceNormals()
 
 		m_face_centers.col(i) = (m_nodes.col(m_bound_faces(0, i))
 								+m_nodes.col(m_bound_faces(1, i))
-								+m_nodes.col(m_bound_faces(0, i)))/3.0;
+								+m_nodes.col(m_bound_faces(2, i)))/3.0;
 	}
 }
 
@@ -311,10 +311,10 @@ int TetMesh::pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &d
 			a = o_v.dot(o_v);
 			b = o_v.dot(direct);
 			d2 = a - b*b;
-			if (d2 < r2)
+			if (d2 < r2 && d2 < max_distance)
 			{
 				pickID = i;
-				break;
+				max_distance = d2;
 			}
 		}
 	}
