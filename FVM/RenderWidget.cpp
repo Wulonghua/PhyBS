@@ -19,7 +19,7 @@ RenderWidget::~RenderWidget()
 void RenderWidget::init()
 {
 	restoreStateFromFile();
-	this->setSceneRadius(2);
+	this->setSceneRadius(5);
 
 	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
 	if (!render)
@@ -175,6 +175,7 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *e)
 	if (m_picked)
 	{
 		Eigen::Vector3d A2= gl_tetmesh->getFaceCenter(m_picki);
+		m_line_end1 = A2;
 		qglviewer::Vec qA2(A2[0], A2[1], A2[2]);
 		//qglviewer::Vec qA1 = camera()->cameraCoordinatesOf(qA2);
 		qglviewer::Vec qa = camera()->projectedCoordinatesOf(qA2);
@@ -186,6 +187,8 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *e)
 		m_line_end2[0] = qB2.x;
 		m_line_end2[1] = qB2.y;
 		m_line_end2[2] = qB2.z;
+
+		gl_tetmesh->dragFace(m_picki, m_line_end2 - m_line_end1);
 	}
 	else
 	{
@@ -199,6 +202,7 @@ void RenderWidget::mouseReleaseEvent(QMouseEvent *e)
 	if (m_picked)
 	{
 		m_picked = false;
+		gl_tetmesh->resetExternalForce();
 	}
 	QGLViewer::mouseReleaseEvent(e);
 }

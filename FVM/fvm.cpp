@@ -1,7 +1,7 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(4)
+	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(8)
 {
 	ui.setupUi(this);
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -134,7 +134,6 @@ void FVM::DoOneStep()
 	//std::cout << "velocity: " << std::endl;
 	//std::cout << m_tetMesh->getVelocities() << std::endl;
 
-	//std::cout << std::endl;
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
 	//m_tetMesh->writeNodes(node_file);
 	//ui.glWidget->saveSnapshot(snap_file, true);
@@ -173,13 +172,13 @@ void FVM::DoTest()
 	int elapse;
 
 	ui.glWidget->restartTime();
-	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
 
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to compute force: " << elapse << std::endl;
 
 
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to compute K: " << elapse << std::endl;

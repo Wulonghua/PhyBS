@@ -46,9 +46,10 @@ public:
 	
 
 	void addNodesForces(Eigen::MatrixXd &forces) { m_nodes_forces += forces;}
-	void addNodeForce(int nodeID, Eigen::Vector3d const &force) { m_nodes_forces.col(nodeID) += force; }
-	void initForcesFromGravity() { m_nodes_forces = m_nodes_gravity; }
-
+	void addNodeForce(int nodeID, const Eigen::Vector3d &force) { m_nodes_forces.col(nodeID) += force; }
+	void initForcesFromGravityExternals() { m_nodes_forces = m_nodes_gravity + m_nodes_external_forces; }
+	void resetExternalForce() { m_nodes_external_forces.setZero();}
+	void dragFace(int faceID, const Eigen::Vector3d &dragline);
 	// approximate method, shoot the ray and test the center of each face, if it is within certain distance
 	// then the face is chosen.
 	int pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &direct);
@@ -79,6 +80,7 @@ private:
 
 	Eigen::VectorXd m_nodes_mass;		// nodes 
 	Eigen::MatrixXd m_nodes_gravity;
+	Eigen::MatrixXd m_nodes_external_forces;
 
 	Eigen::MatrixXd m_nodes_forces;
 	

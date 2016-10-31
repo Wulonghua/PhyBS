@@ -4,6 +4,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/PardisoSupport>
 #include <iostream>
+#include "mkl.h"
 
 class TimeIntegration
 {
@@ -39,6 +40,8 @@ public:
 
 private:
 	void addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel);
+
+	Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> m_pardiso_solver;
 
 	Eigen::MatrixXd m_positions;  // nodes' positions after one time step
 	Eigen::MatrixXd m_velocities; // nodes' velocities after one time step

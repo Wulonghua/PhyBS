@@ -35,11 +35,14 @@ void TetMesh::initNodesFromFile(QString filename)
 		{
 			fin >> prefix >> m_rest_positions(0, i) >> m_rest_positions(1, i) >> m_rest_positions(2, i);
 
-			if (m_rest_positions(0, i) == -2.5)
-				m_constraintIDs.push_back(i);
+			//if (m_rest_positions(0, i) == -2.5)
+			//	m_constraintIDs.push_back(i);
 
 			//if (m_rest_positions(1, i) > 0.16)
 			//	m_constraintIDs.push_back(i);
+
+			if (m_rest_positions(1, i) < -1.8)
+				m_constraintIDs.push_back(i);
 		}
 
 		m_nodes = m_rest_positions;
@@ -53,6 +56,7 @@ void TetMesh::initNodesFromFile(QString filename)
 
 		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
 		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_nodes_external_forces = Eigen::MatrixXd::Zero(3, n_nodes);
 		//std::cout << m_nodes;
 	}
 }
@@ -148,17 +152,25 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
 
-	initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
-	initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
-	initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
+
+	//initNodesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.face"));
 
 	//initNodesFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.node"));
 	//initTetsFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.face"));
 
+	initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
+
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	setTetMaterial(1000000, 0.45,800);
+	setTetMaterial(800000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight
@@ -321,6 +333,27 @@ int TetMesh::pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &d
 	return pickID;
 }
 
+void TetMesh::dragFace(int faceID, const Eigen::Vector3d &dragline)
+{
+	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	double factor = dragline.norm()/r * 100;
+	if (factor > 1000)
+		factor = 1000;
+	//std::cout << factor << std::endl;
+	Eigen::Vector3d dir = dragline.normalized();
+	//std::cout << dir << std::endl;
+	//if (factor > 10)
+	//	factor = 10;
+
+	resetExternalForce();
+	int nodeID;
+	for (int i = 0; i < 3; ++i)
+	{
+		nodeID = m_bound_faces.col(faceID)[i];
+		m_nodes_external_forces.col(i) += factor * m_nodes_mass(nodeID) * dir;
+	}
+}
+
 void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel)
 {
 	m_nodes = pos;
@@ -407,3 +440,4 @@ void TetMesh::writeNodes(QString nodefile)
 		file.close();
 	}
 }
+

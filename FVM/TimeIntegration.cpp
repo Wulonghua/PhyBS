@@ -27,7 +27,7 @@ TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m) : m_t(2e-3)
 }
 
 TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXd m, std::vector<int> constraints, Eigen::MatrixXd rest_pos) :
-m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.05), m_dumpingBelta(0.05)
+m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.02), m_dumpingBelta(0.02)
 {
 	m_positions = Eigen::MatrixXd::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXd::Zero(3, num_nodes);
@@ -171,12 +171,17 @@ void TimeIntegration::BackEuler(Eigen::MatrixXd & pos,
 
 	Eigen::VectorXd b = m_masses.cwiseProduct(v) + m_t * f;
 
-	Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> pardiso_solver;
-	pardiso_solver.compute(A);
-	v = pardiso_solver.solve(b);
+	//Eigen::PardisoLDLT<Eigen::SparseMatrix<double>> pardiso_solver;
+	//omp_set_num_threads(8);
+	//mkl_set_num_threads(8);
+	mkl_set_dynamic(0);
+	mkl_set_num_threads(4);
+	m_pardiso_solver.compute(A);
+	v = m_pardiso_solver.solve(b);
 
 	p += m_t * v;
-
+	
+	//std::cout << mkl_get_max_threads() << std::endl;
 }
 
 void TimeIntegration::addGroundConstraints(double y, Eigen::MatrixXd & pos, Eigen::MatrixXd & vel)

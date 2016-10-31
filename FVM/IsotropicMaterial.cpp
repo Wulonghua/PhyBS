@@ -229,7 +229,7 @@ Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats()
 	double mu, lambda, I3;
 	Eigen::Matrix3d P, U, V, forces;
 
-	m_tetModel->initForcesFromGravity();
+	m_tetModel->initForcesFromGravityExternals();
 	for (int i = 0; i < n; ++i)
 	{
 		// compute First Piola-Kirchhoff stress based on diagonalized F.
@@ -282,7 +282,7 @@ Eigen::MatrixXd IsotropicMaterial::computeInnerForcesfromFhats(int num_Threads)
 {
 	computeFhatsInvariants(num_Threads);
 	int n = m_tetModel->getTetsNum();
-	m_tetModel->initForcesFromGravity();
+	m_tetModel->initForcesFromGravityExternals();
 	
 	omp_lock_t lck;
 	omp_init_lock(&lck);

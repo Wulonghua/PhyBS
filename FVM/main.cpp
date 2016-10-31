@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[])
 {
-
+	//Eigen::initParallel();
 	QApplication a(argc, argv);
 	FVM w;
 	w.show();
