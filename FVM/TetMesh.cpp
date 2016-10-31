@@ -130,16 +130,17 @@ void TetMesh::initFacesFromFile(QString filename)
 		n_bound_faces = segs[0].toInt();
 		m_bound_normals = Eigen::MatrixXd::Zero(3,n_bound_faces);
 		m_face_centers = Eigen::MatrixXd::Zero(3,n_bound_faces);
+		m_faceRingIndices.resize(n_bound_faces);
 
-		//load Tets' indices
+		//load faces' indices
 		int prefix;
 		m_bound_faces = Eigen::MatrixXi::Zero(3, n_bound_faces);
 		for (size_t i = 0; i < n_bound_faces; ++i)
 		{
 			fin >> prefix >> m_bound_faces(0,i) >> m_bound_faces(1,i) >> m_bound_faces(2,i);
 		}
-		//std::cout << m_bound_faces;
 	}
+	computeBoundfaceRingIndices();
 }
 
 void TetMesh::initModel()
@@ -170,7 +171,7 @@ void TetMesh::initModel()
 
 	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	setTetMaterial(800000, 0.45,1000);
+	setTetMaterial(1000000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight
@@ -192,6 +193,56 @@ void TetMesh::initModel()
 	m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
 	
 	std::cout << "tet model has been initialized."<<std::endl;
+}
+
+void TetMesh::computeBoundfaceRingIndices()
+{
+	std::vector<std::set<int>> nodeRing;
+	std::set<int> tmp;
+	int i1, i2, i3;
+
+	nodeRing.resize(n_nodes);
+
+	
+	for (int i = 0; i < n_bound_faces; ++i)
+	{
+		nodeRing[m_bound_faces(0, i)].insert(m_bound_faces(1, i));
+		nodeRing[m_bound_faces(0, i)].insert(m_bound_faces(2, i));
+		nodeRing[m_bound_faces(1, i)].insert(m_bound_faces(0, i));
+		nodeRing[m_bound_faces(1, i)].insert(m_bound_faces(2, i));
+		nodeRing[m_bound_faces(2, i)].insert(m_bound_faces(0, i));
+		nodeRing[m_bound_faces(2, i)].insert(m_bound_faces(1, i));
+	}
+
+	for (int i = 0; i < n_bound_faces; ++i)
+	{
+		tmp.clear();
+		int ii[3];
+		ii[0] = m_bound_faces(0, i);
+		ii[1] = m_bound_faces(1, i);
+		ii[2] = m_bound_faces(2, i);
+
+		for (int j = 0; j < 3; ++j)
+		{
+			for (auto iter = nodeRing[ii[j]].begin(); iter != nodeRing[ii[j]].end(); ++iter)
+			{
+				tmp.insert(*iter);
+			}
+		}
+
+		for (int j = 0; j < 3; ++j)
+		{
+			tmp.erase(ii[j]);
+			m_faceRingIndices[i].push_back(ii[j]);
+		}
+
+		for (auto iter = tmp.begin(); iter != tmp.end(); ++iter)
+		{
+			m_faceRingIndices[i].push_back(*iter);
+		}
+	}
+
+
 }
 
 void TetMesh::computeANs(int tetid)
@@ -350,7 +401,35 @@ void TetMesh::dragFace(int faceID, const Eigen::Vector3d &dragline)
 	for (int i = 0; i < 3; ++i)
 	{
 		nodeID = m_bound_faces.col(faceID)[i];
-		m_nodes_external_forces.col(i) += factor * m_nodes_mass(nodeID) * dir;
+		//std::cout << nodeID << std::endl;
+		m_nodes_external_forces.col(nodeID) += factor * m_nodes_mass(nodeID) * dir;
+	}
+}
+
+void TetMesh::dragFaceRing(int faceID, const Eigen::Vector3d &dragline)
+{
+	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	double factor = dragline.norm() / r * 100;
+	if (factor > 800)
+		factor = 800;
+	//std::cout << factor << std::endl;
+	Eigen::Vector3d dir = dragline.normalized();
+	//std::cout << dir << std::endl;
+	//if (factor > 10)
+	//	factor = 10;
+
+	resetExternalForce();
+	int nodeID;
+	for (int i = 0; i < 3; ++i)
+	{
+		nodeID = m_faceRingIndices[faceID][i];
+		//std::cout << nodeID << std::endl;
+		m_nodes_external_forces.col(nodeID) += factor * m_nodes_mass(nodeID) * dir;
+	}
+
+	for (auto iter = m_faceRingIndices[faceID].begin() + 3; iter != m_faceRingIndices[faceID].end(); ++iter)
+	{
+		m_nodes_external_forces.col(*iter) += 0.5 * factor * m_nodes_mass(*iter) * dir;
 	}
 }
 
@@ -383,6 +462,19 @@ void TetMesh::drawTetBoundFace()
 		glVertex3dv(m_nodes.col(m_bound_faces(0, i)).data());
 		glVertex3dv(m_nodes.col(m_bound_faces(1, i)).data());
 		glVertex3dv(m_nodes.col(m_bound_faces(2, i)).data());
+		glEnd();
+	}
+}
+
+void TetMesh::drawDraggedNodes(int faceID)
+{
+	std::vector<int> &ids = m_faceRingIndices[faceID];
+	glColor3f(1.00,0.25,1.00);
+	glPointSize(2.0);
+	for (auto iter = ids.begin(); iter != ids.end(); ++iter)
+	{
+		glBegin(GL_POINTS);
+		glVertex3dv(m_nodes.col(*iter).data());
 		glEnd();
 	}
 }

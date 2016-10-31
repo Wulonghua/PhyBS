@@ -37,6 +37,8 @@ void RenderWidget::draw()
 
 	if (m_picked)
 	{
+		m_line_end1 = gl_tetmesh->getFaceCenter(m_picki);
+		gl_tetmesh->drawDraggedNodes(m_picki);
 		glColor3d(1, 0, 0);
 		glBegin(GL_LINES);
 		glVertex3dv(m_line_end1.data());
@@ -188,7 +190,8 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *e)
 		m_line_end2[1] = qB2.y;
 		m_line_end2[2] = qB2.z;
 
-		gl_tetmesh->dragFace(m_picki, m_line_end2 - m_line_end1);
+		//gl_tetmesh->dragFace(m_picki, m_line_end2 - m_line_end1);
+		gl_tetmesh->dragFaceRing(m_picki, m_line_end2 - m_line_end1);
 	}
 	else
 	{

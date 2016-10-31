@@ -7,6 +7,9 @@
 #include <qopengl.h>
 #include <qfile.h>
 #include <iostream>
+#include <vector>
+#include <set>
+#include <algorithm>
 
 class RenderWidget;
 class TetMesh
@@ -26,6 +29,7 @@ public:
 	Eigen::Matrix3d computeDeformationGradient(int tetID);
 
 	void drawTetBoundFace();
+	void drawDraggedNodes(int faceID);
 	void updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel);
 
 	// The following are inline functions
@@ -50,6 +54,7 @@ public:
 	void initForcesFromGravityExternals() { m_nodes_forces = m_nodes_gravity + m_nodes_external_forces; }
 	void resetExternalForce() { m_nodes_external_forces.setZero();}
 	void dragFace(int faceID, const Eigen::Vector3d &dragline);
+	void dragFaceRing(int faceID, const Eigen::Vector3d &dragline);
 	// approximate method, shoot the ray and test the center of each face, if it is within certain distance
 	// then the face is chosen.
 	int pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &direct);
@@ -64,6 +69,7 @@ private:
 	void initModel();
 	void computeANs(int tetid);
 	void computeBoundfaceNormals();
+	void computeBoundfaceRingIndices();
 	
 
 	Eigen::MatrixXd m_nodes;			// nodes' positions     : 3*n matrix
@@ -74,6 +80,7 @@ private:
 	Eigen::MatrixXi m_bound_faces;		// the surfaces' indices of tet-mesh's boundary.
 	Eigen::MatrixXd m_bound_normals;    // the surfaces' normals.
 	Eigen::MatrixXd m_face_centers;
+	std::vector<std::vector<int>> m_faceRingIndices;   // store the indices of the nodes which connect to certain bound face.
 
 	Eigen::MatrixXd m_Dm_inverses;
 	Eigen::MatrixXd m_ANs;

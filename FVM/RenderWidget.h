@@ -26,6 +26,7 @@ public:
 	void startTime() { m_time.start(); };
 
 protected:
+
 	virtual void draw();
 	virtual void init();
 
