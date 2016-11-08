@@ -93,9 +93,9 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
-	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
+	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+	Eigen::SparseMatrix<float> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;
@@ -116,13 +116,13 @@ void FVM::DoOneStep()
 		m_tetMesh->getVelocities(),
 		forces, sK);
 
-	//m_tetMesh->getNodes().col(0) = Eigen::Vector3d(0.1, 0.1, 0.1);
-	//m_tetMesh->getVelocities().col(0) = Eigen::Vector3d::Zero();
+	//m_tetMesh->getNodes().col(0) = Eigen::Vector3f(0.1, 0.1, 0.1);
+	//m_tetMesh->getVelocities().col(0) = Eigen::Vector3f::Zero();
 	
 	
 
-	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
-	//m_velocities.col(1) = Eigen::Vector3d::Zero();
+	//m_nodes.col(1) = Eigen::Vector3f(-1.0, 1.0, -1.0);
+	//m_velocities.col(1) = Eigen::Vector3f::Zero();
 
 	//std::cout << "after integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
@@ -165,20 +165,20 @@ void FVM::DoTest()
 	//m_IsoMaterial->computeInnerForcesfromFhats();
 	//auto m = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << m;
-	//Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats();
-	//Eigen::MatrixXd K = m_IsoMaterial->computeStiffnessMatrix(0);
+	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats();
+	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
 	int elapse;
 
 	ui.glWidget->restartTime();
-	Eigen::MatrixXd forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
+	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
 
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to compute force: " << elapse << std::endl;
 
 
-	Eigen::SparseMatrix<double> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+	Eigen::SparseMatrix<float> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to compute K: " << elapse << std::endl;

@@ -41,8 +41,8 @@ void RenderWidget::draw()
 		gl_tetmesh->drawDraggedNodes(m_picki);
 		glColor3d(1, 0, 0);
 		glBegin(GL_LINES);
-		glVertex3dv(m_line_end1.data());
-		glVertex3dv(m_line_end2.data());
+		glVertex3fv(m_line_end1.data());
+		glVertex3fv(m_line_end2.data());
 		glEnd();
 	}
 		
@@ -137,8 +137,8 @@ void RenderWidget::mousePressEvent(QMouseEvent *e)
 		//std::cout << "point: " << e->pos().x() << " " << e->pos().y() << std::endl;
 
 		// window pos of mouse, Y is inverted on Windows
-		double winX = e->pos().x();
-		double winY = e->pos().y();
+		float winX = e->pos().x();
+		float winY = e->pos().y();
 
 		// get point on the 'near' plane 
 		gluUnProject(winX, winY, 0.0, m_ModelView, m_Projection,
@@ -151,7 +151,7 @@ void RenderWidget::mousePressEvent(QMouseEvent *e)
 		origin << orig.x, orig.y, orig.z;
 		//direction << dir.x, dir.y, dir.z;
 		direction = (endp2 - endp1).normalized();
-		m_picki = gl_tetmesh->pickFacebyRay(origin, direction);
+		m_picki = gl_tetmesh->pickFacebyRay(origin.cast<float>(), direction.cast<float>());
 		std::cout << "picked: "<< m_picki <<std::endl;
 
 		if (m_picki > -1)
@@ -176,7 +176,7 @@ void RenderWidget::mouseMoveEvent(QMouseEvent *e)
 {
 	if (m_picked)
 	{
-		Eigen::Vector3d A2= gl_tetmesh->getFaceCenter(m_picki);
+		Eigen::Vector3f A2= gl_tetmesh->getFaceCenter(m_picki);
 		m_line_end1 = A2;
 		qglviewer::Vec qA2(A2[0], A2[1], A2[2]);
 		//qglviewer::Vec qA1 = camera()->cameraCoordinatesOf(qA2);
@@ -210,7 +210,7 @@ void RenderWidget::mouseReleaseEvent(QMouseEvent *e)
 	QGLViewer::mouseReleaseEvent(e);
 }
 
-void RenderWidget::renderText2D(double x, double y, QString text, QPainter *painter)
+void RenderWidget::renderText2D(float x, float y, QString text, QPainter *painter)
 {
 	painter->setPen(Qt::darkCyan);
 	painter->setFont(QFont("Arial", 20));
@@ -218,7 +218,7 @@ void RenderWidget::renderText2D(double x, double y, QString text, QPainter *pain
 	painter->drawText(x, y, text); // z = pointT4.z + distOverOp / 4
 }
 
-void RenderWidget::renderText3D(double x, double y, double z, QString text, QPainter *painter)
+void RenderWidget::renderText3D(float x, float y, float z, QString text, QPainter *painter)
 {
 	int width = this->width();
 	int height = this->height();

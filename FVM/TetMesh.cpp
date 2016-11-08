@@ -29,7 +29,7 @@ void TetMesh::initNodesFromFile(QString filename)
 		
 		//load nodes' positions
 		int prefix;
-		m_rest_positions = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_rest_positions = Eigen::MatrixXf::Zero(3, n_nodes);
 
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
@@ -48,15 +48,15 @@ void TetMesh::initNodesFromFile(QString filename)
 		m_nodes = m_rest_positions;
 
 
-		m_nodes_mass = Eigen::VectorXd::Zero(n_nodes);
-		m_velocities = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_nodes_mass = Eigen::VectorXf::Zero(n_nodes);
+		m_velocities = Eigen::MatrixXf::Zero(3, n_nodes);
 
 		//for test
-		//m_velocities.row(1) = -50.0 * Eigen::VectorXd::Ones(n_nodes);
+		//m_velocities.row(1) = -50.0 * Eigen::VectorXf::Ones(n_nodes);
 
-		m_nodes_gravity = Eigen::MatrixXd::Zero(3, n_nodes);
-		m_nodes_forces = Eigen::MatrixXd::Zero(3, n_nodes);
-		m_nodes_external_forces = Eigen::MatrixXd::Zero(3, n_nodes);
+		m_nodes_gravity = Eigen::MatrixXf::Zero(3, n_nodes);
+		m_nodes_forces = Eigen::MatrixXf::Zero(3, n_nodes);
+		m_nodes_external_forces = Eigen::MatrixXf::Zero(3, n_nodes);
 		//std::cout << m_nodes;
 	}
 }
@@ -128,8 +128,8 @@ void TetMesh::initFacesFromFile(QString filename)
 		QString line = fin.readLine().simplified();
 		QStringList segs = line.split(" ");
 		n_bound_faces = segs[0].toInt();
-		m_bound_normals = Eigen::MatrixXd::Zero(3,n_bound_faces);
-		m_face_centers = Eigen::MatrixXd::Zero(3,n_bound_faces);
+		m_bound_normals = Eigen::MatrixXf::Zero(3,n_bound_faces);
+		m_face_centers = Eigen::MatrixXf::Zero(3,n_bound_faces);
 		m_faceRingIndices.resize(n_bound_faces);
 
 		//load faces' indices
@@ -169,16 +169,16 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
 
-	m_Dm_inverses = Eigen::MatrixXd::Zero(3, n_tets * 3);
-	m_ANs		  = Eigen::MatrixXd::Zero(3, n_tets * 3);
+	m_Dm_inverses = Eigen::MatrixXf::Zero(3, n_tets * 3);
+	m_ANs		  = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	setTetMaterial(1000000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight
-	double w;
+	float w;
 	for (size_t i = 0; i < n_tets; ++i)
 	{
-		Eigen::Matrix3d Dm = Eigen::Matrix3d::Zero();
+		Eigen::Matrix3f Dm = Eigen::Matrix3f::Zero();
 		Dm.col(0) = (m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(1) = (m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
@@ -248,7 +248,7 @@ void TetMesh::computeBoundfaceRingIndices()
 void TetMesh::computeANs(int tetid)
 {
 	int edge[3][4] = {{1,0,2,3},{2,0,3,1},{3,0,1,2}};
-	Eigen::Vector3d v1, v2, v3;
+	Eigen::Vector3f v1, v2, v3;
 	for (size_t i = 0; i < 3; ++i)
 	{
 		v1 = m_nodes.col(m_tets(edge[i][1], tetid)) - m_nodes.col(m_tets(edge[i][0], tetid));
@@ -262,9 +262,9 @@ void TetMesh::computeANs(int tetid)
 	}
 }
 
-Eigen::Matrix3d TetMesh::computeDeformationGradient(int i) // i is tet's index
+Eigen::Matrix3f TetMesh::computeDeformationGradient(int i) // i is tet's index
 {
-	Eigen::Matrix3d Ds, tmp;
+	Eigen::Matrix3f Ds, tmp;
 	Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
 	Ds.col(1) = m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i));
 	Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
@@ -286,11 +286,11 @@ Eigen::Matrix3d TetMesh::computeDeformationGradient(int i) // i is tet's index
 void TetMesh::computeForces()
 {
 	m_nodes_forces = m_nodes_gravity;
-	Eigen::Matrix3d Ds;
-	Eigen::Matrix3d F;									// Ds * Dm_inverse
-	Eigen::Matrix3d G;									// Green Strain 1/2 * (F_tanspose * F - I)
-	Eigen::Matrix3d sigma = Eigen::Matrix3d::Zero();	// Cauch stress using isotropic linear elastic material
-	Eigen::Matrix3d P;									// First Piola-Kirchhoff stress
+	Eigen::Matrix3f Ds;
+	Eigen::Matrix3f F;									// Ds * Dm_inverse
+	Eigen::Matrix3f G;									// Green Strain 1/2 * (F_tanspose * F - I)
+	Eigen::Matrix3f sigma = Eigen::Matrix3f::Zero();	// Cauch stress using isotropic linear elastic material
+	Eigen::Matrix3f P;									// First Piola-Kirchhoff stress
 	for (int i = 0; i < n_tets; ++i)
 	{
 		Ds.col(0) = m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i));
@@ -298,8 +298,8 @@ void TetMesh::computeForces()
 		Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
 		
 		F = Ds * m_Dm_inverses.block<3,3>(0,3*i);
-		G = (F.transpose()*F - Eigen::Matrix3d::Identity()) / 2.0;
-		//C = (F.transpose() + F) / 2.0 - Eigen::Matrix3d::Identity();
+		G = (F.transpose()*F - Eigen::Matrix3f::Identity()) / 2.0;
+		//C = (F.transpose() + F) / 2.0 - Eigen::Matrix3f::Identity();
 		//test
 		//std::cout << "green strain: " << G << std::endl;
 
@@ -320,7 +320,7 @@ void TetMesh::computeForces()
 		//std::cout << "F-T: " << F.transpose().inverse() << std::endl;
 
 		// compute forces for node1, node2 and node3.  f4 = - (f1+f2+f3)
-		Eigen::Matrix3d inner_forces = P * m_ANs.block<3, 3>(0, 3 * i);
+		Eigen::Matrix3f inner_forces = P * m_ANs.block<3, 3>(0, 3 * i);
 
 		m_nodes_forces.col(m_tets(1, i)) += inner_forces.col(0);
 		m_nodes_forces.col(m_tets(2, i)) += inner_forces.col(1);
@@ -330,7 +330,7 @@ void TetMesh::computeForces()
 	//std::cout << "one iteration" << std::endl;
 }
 
-void TetMesh::setTetMaterial(double e, double nu, double den)
+void TetMesh::setTetMaterial(float e, float nu, float den)
 {
 	m_E  = e;
 	m_nu = nu;
@@ -343,7 +343,7 @@ void TetMesh::setTetMaterial(double e, double nu, double den)
 
 void TetMesh::computeBoundfaceNormals()
 {
-	Eigen::Vector3d v1, v2, v3;
+	Eigen::Vector3f v1, v2, v3;
 	for (int i = 0; i < n_bound_faces;++i)
 	{
 		v1 = m_nodes.col(m_bound_faces(1, i)) - m_nodes.col(m_bound_faces(0, i));
@@ -356,20 +356,20 @@ void TetMesh::computeBoundfaceNormals()
 	}
 }
 
-int TetMesh::pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &direct)
+int TetMesh::pickFacebyRay(const Eigen::Vector3f &orig, const Eigen::Vector3f &direct)
 {
-	double max_distance = 1e8;
-	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
-	double r2 = r*r;
-	double d2,a,b;
-	Eigen::Vector3d o_v;
+	float max_distance = 1e8;
+	float r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	float r2 = r*r;
+	float d2,a,b;
+	Eigen::Vector3f o_v;
 	int pickID = -1;
 
 	for (int i = 0; i < n_bound_faces; ++i)
 	{
 		if (m_bound_normals.col(i).dot(direct) < 0)
 		{
-			Eigen::Vector3d tmp = m_face_centers.col(i);
+			Eigen::Vector3f tmp = m_face_centers.col(i);
 			o_v = orig - m_face_centers.col(i);
 			a = o_v.dot(o_v);
 			b = o_v.dot(direct);
@@ -384,14 +384,14 @@ int TetMesh::pickFacebyRay(const Eigen::Vector3d &orig, const Eigen::Vector3d &d
 	return pickID;
 }
 
-void TetMesh::dragFace(int faceID, const Eigen::Vector3d &dragline)
+void TetMesh::dragFace(int faceID, const Eigen::Vector3f &dragline)
 {
-	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
-	double factor = dragline.norm()/r * 100;
+	float r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	float factor = dragline.norm()/r * 100;
 	if (factor > 1000)
 		factor = 1000;
 	//std::cout << factor << std::endl;
-	Eigen::Vector3d dir = dragline.normalized();
+	Eigen::Vector3f dir = dragline.normalized();
 	//std::cout << dir << std::endl;
 	//if (factor > 10)
 	//	factor = 10;
@@ -406,14 +406,14 @@ void TetMesh::dragFace(int faceID, const Eigen::Vector3d &dragline)
 	}
 }
 
-void TetMesh::dragFaceRing(int faceID, const Eigen::Vector3d &dragline)
+void TetMesh::dragFaceRing(int faceID, const Eigen::Vector3f &dragline)
 {
-	double r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
-	double factor = dragline.norm() / r * 100;
+	float r = (m_nodes.col(m_bound_faces(1, 0)) - m_nodes.col(m_bound_faces(0, 0))).norm();
+	float factor = dragline.norm() / r * 100;
 	if (factor > 800)
 		factor = 800;
 	//std::cout << factor << std::endl;
-	Eigen::Vector3d dir = dragline.normalized();
+	Eigen::Vector3f dir = dragline.normalized();
 	//std::cout << dir << std::endl;
 	//if (factor > 10)
 	//	factor = 10;
@@ -433,20 +433,20 @@ void TetMesh::dragFaceRing(int faceID, const Eigen::Vector3d &dragline)
 	}
 }
 
-void TetMesh::updateNodesVelocities(const Eigen::MatrixXd & pos, const Eigen::MatrixXd & vel)
+void TetMesh::updateNodesVelocities(const Eigen::MatrixXf & pos, const Eigen::MatrixXf & vel)
 {
 	m_nodes = pos;
 	m_velocities = vel;
 
 	//cube test with fixed node 
-	//m_nodes.col(8) = Eigen::Vector3d(0, 0.5, -0.5);
-	//m_velocities.col(8) = Eigen::Vector3d::Zero();
+	//m_nodes.col(8) = Eigen::Vector3f(0, 0.5, -0.5);
+	//m_velocities.col(8) = Eigen::Vector3f::Zero();
 
 	// tet test with fixed node
-	//m_nodes.col(0) = Eigen::Vector3d(1.0, 1.0, 1.0);
-	//m_velocities.col(0) = Eigen::Vector3d::Zero();
-	//m_nodes.col(1) = Eigen::Vector3d(-1.0, 1.0, -1.0);
-	//m_velocities.col(1) = Eigen::Vector3d::Zero();
+	//m_nodes.col(0) = Eigen::Vector3f(1.0, 1.0, 1.0);
+	//m_velocities.col(0) = Eigen::Vector3f::Zero();
+	//m_nodes.col(1) = Eigen::Vector3f(-1.0, 1.0, -1.0);
+	//m_velocities.col(1) = Eigen::Vector3f::Zero();
 }
 
 void TetMesh::drawTetBoundFace()
@@ -458,10 +458,10 @@ void TetMesh::drawTetBoundFace()
 	{
 		
 		glBegin(GL_TRIANGLES);
-		glNormal3dv(m_bound_normals.col(i).data());
-		glVertex3dv(m_nodes.col(m_bound_faces(0, i)).data());
-		glVertex3dv(m_nodes.col(m_bound_faces(1, i)).data());
-		glVertex3dv(m_nodes.col(m_bound_faces(2, i)).data());
+		glNormal3fv(m_bound_normals.col(i).data());
+		glVertex3fv(m_nodes.col(m_bound_faces(0, i)).data());
+		glVertex3fv(m_nodes.col(m_bound_faces(1, i)).data());
+		glVertex3fv(m_nodes.col(m_bound_faces(2, i)).data());
 		glEnd();
 	}
 }
@@ -474,12 +474,12 @@ void TetMesh::drawDraggedNodes(int faceID)
 	for (auto iter = ids.begin(); iter != ids.end(); ++iter)
 	{
 		glBegin(GL_POINTS);
-		glVertex3dv(m_nodes.col(*iter).data());
+		glVertex3fv(m_nodes.col(*iter).data());
 		glEnd();
 	}
 }
 
-void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
+void TetMesh::writeMatrix(QString filename, Eigen::MatrixXf mat)
 {
 	QFile file(filename);
 	if (file.open(QIODevice::ReadWrite)) {
@@ -499,7 +499,7 @@ void TetMesh::writeMatrix(QString filename, Eigen::MatrixXd mat)
 	}
 }
 
-double TetMesh::fixPrecision(double m)
+float TetMesh::fixPrecision(float m)
 {
 	bool isNegtive = false;
 	if (m < 0)
@@ -508,8 +508,8 @@ double TetMesh::fixPrecision(double m)
 		m *= -1.0;
 	}
 
-	double itg = std::floor(m);
-	double f = m - itg;
+	float itg = std::floor(m);
+	float f = m - itg;
 	f = std::round(f*1e8) * 1e-8;
 	itg += f;
 

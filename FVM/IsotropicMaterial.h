@@ -19,70 +19,70 @@ public:
 	IsotropicMaterial();
 	virtual ~IsotropicMaterial();
 
-	//virtual double computeEnergy(int tetID, Eigen::Vector3d invariants);
-	virtual Eigen::Vector3d computeEnergy2InvariantsGradient(int tetID, Eigen::Vector3d invariants)=0;
-	virtual Eigen::Matrix3d computeEnergy2InvariantsHessian(int tetID, Eigen::Vector3d invariants)=0;
+	//virtual float computeEnergy(int tetID, Eigen::Vector3f invariants);
+	virtual Eigen::Vector3f computeEnergy2InvariantsGradient(int tetID, Eigen::Vector3f invariants)=0;
+	virtual Eigen::Matrix3f computeEnergy2InvariantsHessian(int tetID, Eigen::Vector3f invariants)=0;
 	
 	// Use separable elastic strain Energy: See [Xu, Sin, Zhu, Barbic 2015] paper Section 4.1
 	// "Nonlinear Material Design Using Principal Stretches"
 	// Here I do not use high-level eigen data structure for later
 	// it's easier to tranfer the codes to CUDA version
-	void computeEnergy2FhatGradient(int tetID, const double *Fhats, double *gradient);
-	void computeEnergy2FhatHessian(int tetID, const double *Fhats, double *hessian);
+	void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient);
+	void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian);
 
-	Eigen::MatrixXd computeInnerForcesfromFhats();
-	Eigen::MatrixXd computeInnerForcesfromFhats(int num_Threads);
+	Eigen::MatrixXf computeInnerForcesfromFhats();
+	Eigen::MatrixXf computeInnerForcesfromFhats(int num_Threads);
 	// compute stiffness Matrix
-	Eigen::MatrixXd computeStiffnessMatrix(int tetID);
-	Eigen::SparseMatrix<double> computeGlobalStiffnessMatrix();
-	Eigen::SparseMatrix<double> computeGlobalStiffnessMatrix(int num_Threads);
+	Eigen::MatrixXf computeStiffnessMatrix(int tetID);
+	Eigen::SparseMatrix<float> computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<float> computeGlobalStiffnessMatrix(int num_Threads);
 
-	const double m_eps_singularvalue;
+	const float m_eps_singularvalue;
 
 protected:
 	
-	virtual double fEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double gEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double hEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double dfEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double dgEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double dhEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double ddfEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double ddgEnergy(double x, const double & mu, const double & lambda) = 0;
-	virtual double ddhEnergy(double x, const double & mu, const double & lambda) = 0;
+	virtual float fEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float gEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float hEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float dfEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float dgEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float dhEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float ddfEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float ddgEnergy(float x, const float & mu, const float & lambda) = 0;
+	virtual float ddhEnergy(float x, const float & mu, const float & lambda) = 0;
 
 	void allocateGlobalStiffnessMatrix();
 	std::vector<int> m_reserveSize;
-	Eigen::SparseMatrix<double> m_globalK;
+	Eigen::SparseMatrix<float> m_globalK;
 
-	std::vector<double> m_mus;
-	std::vector<double> m_lambdas;
+	std::vector<float> m_mus;
+	std::vector<float> m_lambdas;
 	std::shared_ptr<TetMesh> m_tetModel;
-	Eigen::MatrixXd m_Fhats;
-	Eigen::MatrixXd m_Us;
-	Eigen::MatrixXd m_Vs;
-	Eigen::MatrixXd m_Invariants;
+	Eigen::MatrixXf m_Fhats;
+	Eigen::MatrixXf m_Us;
+	Eigen::MatrixXf m_Vs;
+	Eigen::MatrixXf m_Invariants;
 
 private:
 	//see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.
-	void computeSVD33modified(Eigen::Matrix3d F, Eigen::Vector3d &S, Eigen::Matrix3d &U, Eigen::Matrix3d &V);
+	void computeSVD33modified(Eigen::Matrix3f F, Eigen::Vector3f &S, Eigen::Matrix3f &U, Eigen::Matrix3f &V);
 	void computeFhatsInvariants();
 	void computeFhatsInvariants(int num_Threads);   // openmp-parallel  
 	void computeFhats();
 
 	// compute dP/dF using [Teran  2005] method
-	Eigen::MatrixXd computeDP2DF(int tetID);
-	Eigen::Matrix3d restoreMatrix33fromTeranVector(Eigen::VectorXd v);
+	Eigen::MatrixXf computeDP2DF(int tetID);
+	Eigen::Matrix3f restoreMatrix33fromTeranVector(Eigen::VectorXf v);
 	const std::array<int, 9> m_matrix33fromTeran; // transfer teran's order to 3*3 matrix row major
 
 	// compute the diagonal entries of the dP(Fhat)/dFij
-	void computeDPFhat2DFij(const double *U, const double *V, const double * hessian, int i, int j, double *dPFhatdFij_diagonal);
+	void computeDPFhat2DFij(const float *U, const float *V, const float * hessian, int i, int j, float *dPFhatdFij_diagonal);
 
 	// Different method: see [Xu et al. 2015] Section3.2 equation (5)
-	void computeDPDFij(const double *U, const double *Fhat, const double *V, const double *PFhats, const double *hessian, int i, int j, double *dPdFij);
-	void computeDP2DF(int tetID, const double *U, const double *Fhat, const double *V, double *dPdF);
+	void computeDPDFij(const float *U, const float *Fhat, const float *V, const float *PFhats, const float *hessian, int i, int j, float *dPdFij);
+	void computeDP2DF(int tetID, const float *U, const float *Fhat, const float *V, float *dPdF);
 
-	Eigen::Matrix3d helperMatDiagonalMat(Eigen::Matrix3d A, const double *diagonal, Eigen::Matrix3d B);
+	Eigen::Matrix3f helperMatDiagonalMat(Eigen::Matrix3f A, const float *diagonal, Eigen::Matrix3f B);
 
 
 	//for test

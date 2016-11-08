@@ -99,8 +99,16 @@
     <ClInclude Include="IsotropicNeohookeanMaterial.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CUDAInterface.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FVM.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CUDAInterface.cu">
+      <Filter>CUDA</Filter>
+    </None>
   </ItemGroup>
 </Project>

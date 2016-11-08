@@ -20,8 +20,8 @@ public:
 	virtual ~RenderWidget();
 
 	void setGLTetMesh(std::shared_ptr<TetMesh> tet) { gl_tetmesh = tet; }
-	void renderText3D(double x, double y, double z, QString text, QPainter *painter);
-	void renderText2D(double x, double y, QString text, QPainter *painter);
+	void renderText3D(float x, float y, float z, QString text, QPainter *painter);
+	void renderText2D(float x, float y, QString text, QPainter *painter);
 	int restartTime() { return m_time.restart(); }
 	void startTime() { m_time.start(); };
 
@@ -64,8 +64,8 @@ private:
 
 	bool m_picked;
 	int m_picki;
-	Eigen::Vector3d m_line_end1;
-	Eigen::Vector3d m_line_end2;
+	Eigen::Vector3f m_line_end1;
+	Eigen::Vector3f m_line_end2;
 };
 
 inline void RenderWidget::transformPoint(GLdouble out[4], const GLdouble m[16], const GLdouble in[4])
