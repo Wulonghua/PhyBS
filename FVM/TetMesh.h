@@ -38,6 +38,7 @@ public:
 	Eigen::MatrixXf & getForces() { return m_nodes_forces; }
 	Eigen::VectorXf & getMasses() { return m_nodes_mass; }
 	Eigen::MatrixXf & getRestPosition() { return m_rest_positions; }
+	Eigen::MatrixXi & getTets() { return m_tets; }
 	std::vector<int> & getConstraintIDs() { return m_constraintIDs; }
 	int getNodesNum() { return n_nodes; }
 	int getTetsNum() { return n_tets; }

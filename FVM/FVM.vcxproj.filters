@@ -107,8 +107,8 @@
     <ResourceCompile Include="FVM.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="CUDAInterface.cu">
+    <CudaCompile Include="CUDAInterface.cu">
       <Filter>CUDA</Filter>
-    </None>
+    </CudaCompile>
   </ItemGroup>
 </Project>

@@ -169,6 +169,8 @@ void FVM::DoTest()
 	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
+
+	/****************** test for cpu parallel elapse time *************************
 	int elapse;
 
 	ui.glWidget->restartTime();
@@ -189,4 +191,8 @@ void FVM::DoTest()
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
+	**************************************************************************************/
+	// para: int n_nodes, const T *nodes, int n_tets, const int *tets, const T youngs, const T nu
+	 m_cudaInterface = std::make_shared<CUDAInterface>(m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(),
+		m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu());
 }
