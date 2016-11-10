@@ -192,6 +192,7 @@ void TetMesh::initModel()
 	}	
 	m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
 	
+	//writeMatrix(QStringLiteral("ANs.csv"), m_ANs.transpose());
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 

@@ -192,7 +192,6 @@ void FVM::DoTest()
 	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
 	**************************************************************************************/
-	// para: int n_nodes, const T *nodes, int n_tets, const int *tets, const T youngs, const T nu
 	 m_cudaInterface = std::make_shared<CUDAInterface>(m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(),
-		m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu());
+		m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000);
 }
