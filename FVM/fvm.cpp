@@ -93,7 +93,7 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
+	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
 	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
 	Eigen::SparseMatrix<float> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 	//std::cout << "before integration: " << std::endl;

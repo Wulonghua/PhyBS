@@ -27,11 +27,19 @@ public:
 	// "Nonlinear Material Design Using Principal Stretches"
 	// Here I do not use high-level eigen data structure for later
 	// it's easier to tranfer the codes to CUDA version
-	void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient);
-	void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian);
+	virtual void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)=0;
+	virtual void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)=0;
 
+	//Teran's method
 	Eigen::MatrixXf computeInnerForcesfromFhats();
+	//Teran's method
 	Eigen::MatrixXf computeInnerForcesfromFhats(int num_Threads);
+
+	//Barbic's method
+	Eigen::MatrixXf computeInnerForcesfromFhats2();
+	//Barbic's method
+	Eigen::MatrixXf computeInnerForcesfromFhats2(int num_Threads);
+
 	// compute stiffness Matrix
 	Eigen::MatrixXf computeStiffnessMatrix(int tetID);
 	Eigen::SparseMatrix<float> computeGlobalStiffnessMatrix();
@@ -69,6 +77,7 @@ private:
 	void computeFhatsInvariants();
 	void computeFhatsInvariants(int num_Threads);   // openmp-parallel  
 	void computeFhats();
+	void computeFhats(int num_Threads);
 
 	// compute dP/dF using [Teran  2005] method
 	Eigen::MatrixXf computeDP2DF(int tetID);

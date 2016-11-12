@@ -46,5 +46,46 @@ Eigen::Matrix3f IsotropicNeohookeanMaterial::computeEnergy2InvariantsHessian(int
 	return hessian;
 }
 
+void IsotropicNeohookeanMaterial::computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)
+{
+	float mu = m_mus[tetID];
+	float lambda = m_lambdas[tetID];
+	float tmp = lambda *  (std::log(Fhats[0]) + std::log(Fhats[1]) + std::log(Fhats[2])) - mu;
+
+	for (int i = 0; i < 3; ++i)
+		gradient[i] = mu*Fhats[i] + tmp / Fhats[i];
+}
+
+// *hessian is the one dimentional representation of the row-major 3*3 hessian matrix
+void IsotropicNeohookeanMaterial::computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)
+{
+	float mu = m_mus[tetID];
+	float lambda = m_lambdas[tetID];
+	
+	float tmp  =  lambda * (std::log(Fhats[0]) + std::log(Fhats[1]) + std::log(Fhats[2]));
+	float tmp1 = mu + lambda - tmp;
+	float tmp2 = tmp - mu;
+
+	float inv_lambda1 = 1 / Fhats[0];
+	float inv_lambda2 = 1 / Fhats[1];
+	float inv_lambda3 = 1 / Fhats[2];
+
+		// hessian(1,1)
+	hessian[0] = mu + tmp1 * inv_lambda1 * inv_lambda1;
+		// hessian(2,2)
+	hessian[4] = mu + tmp1 * inv_lambda2 * inv_lambda2;
+		// hessian(3,3)
+	hessian[8] = mu + tmp1 * inv_lambda3 * inv_lambda3;
+
+		// hessian(1,2) = hessian(2,1)
+	hessian[1] = hessian[3] = (tmp1 + tmp2) * inv_lambda1 * inv_lambda2;
+	
+		// hessian(1,3) = hessian(3,1)
+	hessian[2] = hessian[6] = (tmp1 + tmp2) * inv_lambda1 * inv_lambda3;
+	
+		// hessian(2,3) = hessian(3,2)
+	hessian[5] = hessian[7] = (tmp1 + tmp2) * inv_lambda2 * inv_lambda3;
+}
+
 
 

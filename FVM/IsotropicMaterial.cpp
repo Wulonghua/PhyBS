@@ -78,6 +78,26 @@ void IsotropicMaterial::computeFhats()
 	}
 }
 
+void IsotropicMaterial::computeFhats(int num_Threads)
+{
+	int n = m_tetModel->getTetsNum();
+
+	omp_set_num_threads(num_Threads);
+#pragma omp parallel for
+	for (int i = 0; i < n; ++i)
+	{
+		Eigen::Matrix3f F, U, V;
+		Eigen::Vector3f Fhat;
+
+		F = m_tetModel->computeDeformationGradient(i);
+		computeSVD33modified(F, Fhat, U, V);
+		m_Fhats.col(i) = Fhat;
+
+		m_Us.block<3, 3>(0, i * 3) = U;
+		m_Vs.block<3, 3>(0, i * 3) = V;
+	}
+}
+
 
 void IsotropicMaterial::computeFhatsInvariants()
 {
@@ -95,7 +115,6 @@ void IsotropicMaterial::computeFhatsInvariants()
 
 		computeSVD33modified(F, Fhat, U, V);
 		m_Fhats.col(i) = Fhat;
-		float t = Fhat[0];
 
 		m_Us.block<3, 3>(0, i * 3) = U;
 		m_Vs.block<3, 3>(0, i * 3) = V;
@@ -229,6 +248,8 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats()
 	float mu, lambda, I3;
 	Eigen::Matrix3f P, U, V, forces;
 
+	//float Phat_[3];
+
 	m_tetModel->initForcesFromGravityExternals();
 	for (int i = 0; i < n; ++i)
 	{
@@ -248,6 +269,19 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats()
 
 		//std::cout << "I3: " << I3 << std::endl;
 		Phat = (Fhat - Fhat_inverseT) * mu + 0.5 * lambda * std::log(I3) * Fhat_inverseT;
+		//computeEnergy2FhatGradient(i, Fhat.data(), Phat_);
+
+		//if (i == 0)
+		//{
+		//	std::cout << "I3: " << I3 << std::endl;
+		//	std::cout << "Fhats: " << Fhat[0] << " " << Fhat[1] << " " << Fhat[2] << std::endl;
+		//	std::cout << "Fhats_inverse: " << Fhat_inverseT[0] << " " << Fhat_inverseT[1] << " " << Fhat_inverseT[2] << std::endl;
+		//	std::cout << "Phat: " << std::endl;
+
+		//	for (int j = 0; j < 3; ++j)
+		//		std::cout << Phat[j] << " " << Phat_[j] << std::endl;
+		//}
+
 
 		//float tmp = Phat[0];
 		//std::cout << "Phat:" << std::endl;
@@ -322,7 +356,84 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats(int num_Threads)
 	return m_tetModel->getForces();
 }
 
+Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2()
+{
+	computeFhats();
+	int n = m_tetModel->getTetsNum();
+	Eigen::Vector3f Phat, Fhat, Fhat_inverseT;
+	float Phat_[3];
 
+	Eigen::Matrix3f P, U, V, forces;
+
+	m_tetModel->initForcesFromGravityExternals();
+	for (int i = 0; i < n; ++i)
+	{
+		// compute First Piola-Kirchhoff stress based on diagonalized F.
+		// Use the equation from paper [Xu et al. 2015] equation 12
+		Fhat = m_Fhats.col(i);
+		//Fhat_inverseT = Fhat.cwiseInverse();
+		computeEnergy2FhatGradient(i, Fhat.data(), Phat_);
+		Phat[0] = Phat_[0];
+		Phat[1] = Phat_[1];
+		Phat[2] = Phat_[2];
+
+		// equation 1 in [Teran 04] P = U * Phat * V^T
+		U = m_Us.block<3, 3>(0, 3 * i);
+		V = m_Vs.block<3, 3>(0, 3 * i);
+		P = U * Phat.asDiagonal() * V.transpose();
+
+		forces = P * m_tetModel->getAN(i);
+
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
+	}
+
+	return m_tetModel->getForces();
+}
+
+Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2(int num_Threads)
+{
+	computeFhats(num_Threads);
+	int n = m_tetModel->getTetsNum();
+	m_tetModel->initForcesFromGravityExternals();
+	
+	omp_lock_t lck;
+	omp_init_lock(&lck);
+	omp_set_num_threads(num_Threads);
+#pragma omp parallel for
+	for (int i = 0; i < n; ++i)
+	{
+		Eigen::Vector3f Phat, Fhat, Fhat_inverseT;
+		float Phat_[3];
+		Eigen::Matrix3f P, U, V, forces;
+		// compute First Piola-Kirchhoff stress based on diagonalized F.
+		// Use the equation from paper [Xu et al. 2015] equation 12
+		Fhat = m_Fhats.col(i);
+		//Fhat_inverseT = Fhat.cwiseInverse();
+		computeEnergy2FhatGradient(i, Fhat.data(), Phat_);
+		Phat[0] = Phat_[0];
+		Phat[1] = Phat_[1];
+		Phat[2] = Phat_[2];
+
+		// equation 1 in [Teran 04] P = U * Phat * V^T
+		U = m_Us.block<3, 3>(0, 3 * i);
+		V = m_Vs.block<3, 3>(0, 3 * i);
+		P = U * Phat.asDiagonal() * V.transpose();
+
+		forces = P * m_tetModel->getAN(i);
+
+		omp_set_lock(&lck);
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
+		omp_unset_lock(&lck);
+	}
+
+	return m_tetModel->getForces();
+}
 
 Eigen::MatrixXf IsotropicMaterial::computeStiffnessMatrix(int tetID)
 {
@@ -510,68 +621,70 @@ Eigen::Matrix3f IsotropicMaterial::restoreMatrix33fromTeranVector(Eigen::VectorX
 	return mat;
 }
 
-void IsotropicMaterial::computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)
-{
-	float lame_mu = m_mus[tetID];
-	float lame_lambda = m_lambdas[tetID];
-	float lambda1 = Fhats[0];
-	float lambda2 = Fhats[1];
-	float lambda3 = Fhats[2];
-
-	float dg12 = dgEnergy(lambda1*lambda2, lame_mu, lame_lambda);
-	float dg23 = dgEnergy(lambda2*lambda3, lame_mu, lame_lambda);
-	float dg31 = dgEnergy(lambda3*lambda1, lame_mu, lame_lambda);
-
-	float dh123 = dhEnergy(lambda1*lambda2*lambda3, lame_mu, lame_lambda);
-
-	gradient[0] = dfEnergy(lambda1, lame_mu, lame_lambda) + dg12 * lambda2 + dg31 * lambda3 + dh123*lambda2*lambda3;
-	gradient[1] = dfEnergy(lambda2, lame_mu, lame_lambda) + dg23 * lambda3 + dg12 * lambda1 + dh123*lambda3*lambda1;
-	gradient[2] = dfEnergy(lambda3, lame_mu, lame_lambda) + dg31 * lambda1 + dg23 * lambda2 + dh123*lambda1*lambda2;
-}
+// To speed up and handle low precision of float type, 
+// I manually simplify the equation rather than call d*Energy and dd*Engergy multiple times.
+//void IsotropicMaterial::computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)
+//{
+//	float lame_mu = m_mus[tetID];
+//	float lame_lambda = m_lambdas[tetID];
+//	float lambda1 = Fhats[0];
+//	float lambda2 = Fhats[1];
+//	float lambda3 = Fhats[2];
+//
+//	float dg12 = dgEnergy(lambda1*lambda2, lame_mu, lame_lambda);
+//	float dg23 = dgEnergy(lambda2*lambda3, lame_mu, lame_lambda);
+//	float dg31 = dgEnergy(lambda3*lambda1, lame_mu, lame_lambda);
+//
+//	float dh123 = dhEnergy(lambda1*lambda2*lambda3, lame_mu, lame_lambda);
+//
+//	gradient[0] = dfEnergy(lambda1, lame_mu, lame_lambda) + dg12 * lambda2 + dg31 * lambda3 + dh123*lambda2*lambda3;
+//	gradient[1] = dfEnergy(lambda2, lame_mu, lame_lambda) + dg23 * lambda3 + dg12 * lambda1 + dh123*lambda3*lambda1;
+//	gradient[2] = dfEnergy(lambda3, lame_mu, lame_lambda) + dg31 * lambda1 + dg23 * lambda2 + dh123*lambda1*lambda2;
+//}
 
 
 // *hessian is the one dimentional representation of the row-major 3*3 hessian matrix
-void IsotropicMaterial::computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)
-{
-	float lame_mu = m_mus[tetID];
-	float lame_lambda = m_lambdas[tetID];
-
-	float lambda12 = Fhats[0] * Fhats[1];
-	float lambda23 = Fhats[1] * Fhats[2];
-	float lambda31 = Fhats[2] * Fhats[0];
-	float lambda123 = lambda12 * Fhats[2];
-
-	float dg12 = dgEnergy(lambda12, lame_mu, lame_lambda);
-	float dg23 = dgEnergy(lambda23, lame_mu, lame_lambda);
-	float dg31 = dgEnergy(lambda31, lame_mu, lame_lambda);
-
-	float ddg12 = ddgEnergy(lambda12, lame_mu, lame_lambda);
-	float ddg23 = ddgEnergy(lambda23, lame_mu, lame_lambda);
-	float ddg31 = ddgEnergy(lambda31, lame_mu, lame_lambda);
-	float dh123 = dhEnergy(lambda123, lame_mu, lame_lambda);
-	float ddh123 = ddhEnergy(lambda123, lame_mu, lame_lambda);
-
-	// hessian(1,1)
-	hessian[0] = ddfEnergy(Fhats[0], lame_mu, lame_lambda) + ddg12 * Fhats[1] * Fhats[1]
-														   + ddg31 * Fhats[2] * Fhats[2]
-														   + ddh123 * lambda23 * lambda23;
-	// hessian(2,2)
-	hessian[4] = ddfEnergy(Fhats[1], lame_mu, lame_lambda) + ddg23 * Fhats[2] * Fhats[2]
-														   + ddg12 * Fhats[0] * Fhats[0]
-														   + ddh123 * lambda31 * lambda31;
-	// hessian(3,3)
-	hessian[8] = ddfEnergy(Fhats[2], lame_mu, lame_lambda) + ddg31 * Fhats[0] * Fhats[0]
-														   + ddg23 * Fhats[1] * Fhats[1]
-														   + ddh123 * lambda12 * lambda12;
-	// hessian(1,2) = hessian(2,1)
-	hessian[1] = hessian[3] = ddg12 * lambda12 + dg12 + ddh123 * lambda23 * lambda31 + dh123 * Fhats[2];
-
-	// hessian(1,3) = hessian(3,1)
-	hessian[2] = hessian[6] = ddg31 * lambda31 + dg31 + ddh123 * lambda12 * lambda23 + dh123 * Fhats[1];
-
-	// hessian(2,3) = hessian(3,2)
-	hessian[5] = hessian[7] = ddg23 * lambda23 + dg23 + ddh123 * lambda12 * lambda31 + dh123 * Fhats[0];
-}
+//void IsotropicMaterial::computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)
+//{
+//	float lame_mu = m_mus[tetID];
+//	float lame_lambda = m_lambdas[tetID];
+//
+//	float lambda12 = Fhats[0] * Fhats[1];
+//	float lambda23 = Fhats[1] * Fhats[2];
+//	float lambda31 = Fhats[2] * Fhats[0];
+//	float lambda123 = lambda12 * Fhats[2];
+//
+//	float dg12 = dgEnergy(lambda12, lame_mu, lame_lambda);
+//	float dg23 = dgEnergy(lambda23, lame_mu, lame_lambda);
+//	float dg31 = dgEnergy(lambda31, lame_mu, lame_lambda);
+//
+//	float ddg12 = ddgEnergy(lambda12, lame_mu, lame_lambda);
+//	float ddg23 = ddgEnergy(lambda23, lame_mu, lame_lambda);
+//	float ddg31 = ddgEnergy(lambda31, lame_mu, lame_lambda);
+//	float dh123 = dhEnergy(lambda123, lame_mu, lame_lambda);
+//	float ddh123 = ddhEnergy(lambda123, lame_mu, lame_lambda);
+//
+//	// hessian(1,1)
+//	hessian[0] = ddfEnergy(Fhats[0], lame_mu, lame_lambda) + ddg12 * Fhats[1] * Fhats[1]
+//														   + ddg31 * Fhats[2] * Fhats[2]
+//														   + ddh123 * lambda23 * lambda23;
+//	// hessian(2,2)
+//	hessian[4] = ddfEnergy(Fhats[1], lame_mu, lame_lambda) + ddg23 * Fhats[2] * Fhats[2]
+//														   + ddg12 * Fhats[0] * Fhats[0]
+//														   + ddh123 * lambda31 * lambda31;
+//	// hessian(3,3)
+//	hessian[8] = ddfEnergy(Fhats[2], lame_mu, lame_lambda) + ddg31 * Fhats[0] * Fhats[0]
+//														   + ddg23 * Fhats[1] * Fhats[1]
+//														   + ddh123 * lambda12 * lambda12;
+//	// hessian(1,2) = hessian(2,1)
+//	hessian[1] = hessian[3] = ddg12 * lambda12 + dg12 + ddh123 * lambda23 * lambda31 + dh123 * Fhats[2];
+//
+//	// hessian(1,3) = hessian(3,1)
+//	hessian[2] = hessian[6] = ddg31 * lambda31 + dg31 + ddh123 * lambda12 * lambda23 + dh123 * Fhats[1];
+//
+//	// hessian(2,3) = hessian(3,2)
+//	hessian[5] = hessian[7] = ddg23 * lambda23 + dg23 + ddh123 * lambda12 * lambda31 + dh123 * Fhats[0];
+//}
 
 // see [Xu et al. 2015] Section 3.1 euqation 10
 void IsotropicMaterial::computeDPFhat2DFij(const float *U, const float *V, const float * hessian, int i, int j, float *dPFhatdFij_diagonal)

@@ -14,7 +14,12 @@ public:
 	virtual Eigen::Vector3f computeEnergy2InvariantsGradient(int tetID, Eigen::Vector3f invariants);
 	virtual Eigen::Matrix3f computeEnergy2InvariantsHessian(int tetID, Eigen::Vector3f invariants);
 
+	virtual void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient);
+	virtual void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian);
+
 protected:
+
+	/**************************************************************************************************************/
 	virtual float fEnergy(float x, const float & mu, const float & lambda) { return 0.5*mu *(x*x - 1); }
 	virtual float gEnergy(float x, const float & mu, const float & lambda) { return 0; }
 	virtual float hEnergy(float x, const float & mu, const float & lambda)
@@ -28,5 +33,8 @@ protected:
 	virtual float ddfEnergy(float x, const float & mu, const float & lambda) { return mu; }
 	virtual float ddgEnergy(float x, const float & mu, const float & lambda) { return 0; }
 	virtual float ddhEnergy(float x, const float & mu, const float & lambda) { return (mu + lambda - lambda*std::log(x)) / (x*x); }
+	/****************************************************************************************************************/
+
+
 };
 

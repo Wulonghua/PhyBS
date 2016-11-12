@@ -27,7 +27,7 @@ TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXf m) : m_t(2e-3)
 }
 
 TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXf m, std::vector<int> constraints, Eigen::MatrixXf rest_pos) :
-m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.02), m_dumpingBelta(0.02)
+m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.03), m_dumpingBelta(0.03)
 {
 	m_positions = Eigen::MatrixXf::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXf::Zero(3, num_nodes);

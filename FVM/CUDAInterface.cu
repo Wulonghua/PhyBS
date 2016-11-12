@@ -60,6 +60,12 @@ __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, fl
 
 }
 
+__global__ void computeInnerForces()
+{
+
+
+}
+
 __global__ void setDeviceArray(float *devicePtr, float v, int num)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
