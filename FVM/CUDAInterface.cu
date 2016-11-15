@@ -6,6 +6,248 @@ float atomicAdd(float *address, float val);
 
 #include "CUDAInterface.h"
 
+__host__ __device__ 
+void computeEnergy2FhatGradient(float mu, float lambda, float *Fhats, float *gradient)
+{
+	float tmp = lambda *  (log(Fhats[0]) + log(Fhats[1]) + log(Fhats[2])) - mu;
+
+	for (int i = 0; i < 3; ++i)
+		gradient[i] = mu*Fhats[i] + tmp / Fhats[i];
+}
+
+__host__ __device__
+void computeEnergy2FhatHessian(float mu, float lambda, const float *Fhats, float *hessian)
+{
+
+	float tmp = lambda * (log(Fhats[0]) + log(Fhats[1]) + log(Fhats[2]));
+	float tmp1 = mu + lambda - tmp;
+	float tmp2 = tmp - mu;
+
+	float inv_lambda1 = 1 / Fhats[0];
+	float inv_lambda2 = 1 / Fhats[1];
+	float inv_lambda3 = 1 / Fhats[2];
+
+	// hessian(1,1)
+	hessian[0] = mu + tmp1 * inv_lambda1 * inv_lambda1;
+	// hessian(2,2)
+	hessian[4] = mu + tmp1 * inv_lambda2 * inv_lambda2;
+	// hessian(3,3)
+	hessian[8] = mu + tmp1 * inv_lambda3 * inv_lambda3;
+
+	// hessian(1,2) = hessian(2,1)
+	hessian[1] = hessian[3] = (tmp1 + tmp2) * inv_lambda1 * inv_lambda2;
+
+	// hessian(1,3) = hessian(3,1)
+	hessian[2] = hessian[6] = (tmp1 + tmp2) * inv_lambda1 * inv_lambda3;
+
+	// hessian(2,3) = hessian(3,2)
+	hessian[5] = hessian[7] = (tmp1 + tmp2) * inv_lambda2 * inv_lambda3;
+}
+
+__host__ __device__
+void computeDPDFij(float *U, float *Fhats, float *V, float *PFhats, float *hessian, int i, int j, float *dPdFij)
+{
+	float wU[9] = {0.0};
+	float wVT[9] = {0.0};
+
+	float A[4], b[2], x[2];
+	
+	int kl[3][2] = { { 0, 1 }, { 0, 2 }, { 1, 2 } };
+	int k, l;
+
+	for (int kli = 0; kli < 3; ++kli)
+	{
+		k = kl[kli][0];
+		l = kl[kli][1];
+		A[0] = A[3] = Fhats[l];
+		A[1] = A[2] = Fhats[k];
+		b[0] = U[3 * i + k] * V[3 * j + l];
+		b[1] = -U[3 * i + l] * V[3 * j + k];
+
+		cuMath::solveLinearSystem22(A, b, x);
+
+		wU[k*3 +l] = x[0];
+		wU[l*3 +k] = -x[0];
+
+		wVT[k*3 + l] = x[1];
+		wVT[l*3 + k] = -x[1];
+	}
+
+	float dUdFij[9], dVTdFij[9];
+	cuMath::Matrix_Product_3(U, wU, dUdFij);
+	cuMath::Matrix_Product_T_3(wVT, V, dVTdFij);
+
+
+	float dPFhatdFij[3];
+	for (int k = 0; k < 3; ++k)
+	{
+		dPFhatdFij[k] = hessian[k] * (U[i * 3] * V[j * 3]) +
+			hessian[k + 3] * (U[i * 3 + 1] * V[j * 3 + 1]) +
+			hessian[k + 6] * (U[i * 3 + 2] * V[j * 3 + 2]);
+	}
+
+	float dPdFij1[9], dPdFij2[9], dPdFij3[9];
+	cuMath::Matrix_Diagonal_Matrix_T_Product_3(dUdFij, PFhats, V, dPdFij1);
+	cuMath::Matrix_Diagonal_Matrix_T_Product_3(U, dPFhatdFij, V, dPdFij2);
+	cuMath::Matrix_Diagonal_Matrix_Product_3(U, PFhats, dVTdFij, dPdFij3);
+
+	for (int k = 0; k < 9; ++k)
+	{
+		dPdFij[k] = dPdFij1[k] + dPdFij2[k] + dPdFij3[k];
+	}
+
+}
+
+
+__host__ __device__ 
+void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, float mu, float lambda, float *dfdx)
+{
+
+	/*********************************Compute dP2dF******************************************/
+	float Ftildes[3];
+	// perturbation: handle degenerated cases: see the paragraph between equation (9) and equation (10)
+	// in paper [Xu et al. 2015]
+	bool isPerturbed = true;
+	float eps_singularvalue = 1e-6;
+	// attention!!! check to make sure Fhats are already sorted in descending order.
+	if (Fhat[0] - Fhat[2] < 2 * eps_singularvalue)
+	{
+		Ftildes[2] = Fhat[2];
+		Ftildes[1] = Ftildes[2] + eps_singularvalue;
+		Ftildes[0] = Ftildes[1] + eps_singularvalue;
+	}
+	else // Fhats[0] - Fhats[2] >= 2 * m_eps_singularvalue
+	{
+		if ((Fhat[0] - Fhat[1] < eps_singularvalue) && (Fhat[1] - Fhat[2] >= eps_singularvalue))
+		{
+			Ftildes[2] = Fhat[2];
+			Ftildes[1] = Fhat[0] - eps_singularvalue;
+			Ftildes[0] = Fhat[0];
+		}
+		else if ((Fhat[0] - Fhat[1] >= eps_singularvalue) && (Fhat[1] - Fhat[2] < eps_singularvalue))
+		{
+			Ftildes[2] = Fhat[2];
+			Ftildes[1] = Fhat[2] + eps_singularvalue;
+			Ftildes[0] = Fhat[0];
+		}
+		else
+		{
+			Ftildes[2] = Fhat[2];
+			Ftildes[1] = Fhat[1];
+			Ftildes[0] = Fhat[0];
+			isPerturbed = false;
+		}
+	}
+
+	float Fnew[9], Unew[9], Fhatnew[3], Vnew[9];
+	if (isPerturbed)
+	{
+		cuMath::Matrix_Diagonal_Matrix_T_Product_3(U, Ftildes, V, Fnew);
+		cuMath::Matrix_SVD_3(Fnew, Unew, Fhatnew, Vnew);
+	}
+	else
+	{
+		memcpy(Unew, U, sizeof(float) * 9);
+		memcpy(Vnew, V, sizeof(float) * 9);
+		memcpy(Fhatnew, Fhat, sizeof(float) * 3);
+	}
+
+	float PFhat[3];
+	computeEnergy2FhatGradient(mu, lambda, Fhatnew, PFhat);
+
+	float hessian[9];
+	computeEnergy2FhatHessian(mu, lambda, Fhatnew, hessian);
+
+	float dPdF[81];
+	float dPdFij[9];
+	int Fid;
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 3; ++j)
+		{
+			Fid = 3 * i + j;
+			// transpose Unew and Vnew cause they are in stored in column-major matrix (Eigen default setting)
+			computeDPDFij(Unew, Fhatnew, Vnew, PFhat, hessian, i, j, dPdFij);
+			// copy dPdFij to dPdF
+			for (int k = 0; k < 9; ++k)
+			{
+				dPdF[k * 9 + Fid] = dPdFij[k];
+			}
+		}
+	}
+	/********************************************************************/
+
+	float dGdF[81];
+	float BT[9];
+	cuMath::Matrix_Inverse_3(AN, BT);
+	cuMath::Matrix_Product(BT, dPdF, dGdF, 3,3,9);
+	cuMath::Matrix_Product(BT, dPdF + 27, dGdF + 27, 3, 3, 9);
+	cuMath::Matrix_Product(BT, dPdF + 54, dGdF + 54, 3, 3, 9);
+
+	float dFdx[108] = { 0.0 };
+	dFdx[0]  = dFdx[37] = dFdx[74] = -Dm_inv[0] - Dm_inv[3] - Dm_inv[6];
+	dFdx[12] = dFdx[49] = dFdx[86] = -Dm_inv[1] - Dm_inv[4] - Dm_inv[7];
+	dFdx[24] = dFdx[61] = dFdx[98] = -Dm_inv[2] - Dm_inv[5] - Dm_inv[8];
+
+	dFdx[3]  = dFdx[40] = dFdx[77]  = Dm_inv[0];
+	dFdx[15] = dFdx[52] = dFdx[89]  = Dm_inv[1];
+	dFdx[27] = dFdx[64] = dFdx[101] = Dm_inv[2];
+
+	dFdx[6]  = dFdx[43] = dFdx[80]  = Dm_inv[3];
+	dFdx[18] = dFdx[55] = dFdx[92]  = Dm_inv[4];
+	dFdx[30] = dFdx[67] = dFdx[104] = Dm_inv[5];
+
+	dFdx[9]  = dFdx[46] = dFdx[83]  = Dm_inv[6];
+	dFdx[21] = dFdx[58] = dFdx[95]  = Dm_inv[7];
+	dFdx[33] = dFdx[70] = dFdx[107] = Dm_inv[8];
+
+	float dGdx[108];
+	cuMath::Matrix_Product(dGdF, dFdx, dGdx, 9, 9, 12);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		for (int j = 0; j < 12; ++j)
+		{
+			dfdx[i * 12 + j] = -dGdx[36 * i + j] - dGdx[36 * i + j + 12] - dGdx[36 * i + j + 24];
+		}
+	}
+
+	int convert_idx[9] = { 0, 3, 6, 1, 4, 7, 2, 5, 8 };
+	for (int i = 0; i < 9; ++i)
+	{
+		memcpy(dfdx + (i + 3) * 12, dGdx + convert_idx[i] * 12, sizeof(float) * 12);
+	}
+}
+
+__global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs, float *mus, float *lambdas, float *gK)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_tets)	return;
+
+	int Ki, Kj, gKi, gKj;
+	float dfdx[144];
+	compute_dfdx(Us + 9 * i, Fhats + 3 * i, Vs + 9 * i, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
+
+	for (int fi = 0; fi < 4; ++fi)
+	{
+		for (int fj = 0; fj < 3; ++fj)
+		{
+			Ki = fi * 3 + fj;
+			gKi = tets[i*4+fi] * 3 + fj;
+			for (int ni = 0; ni < 4; ++ni)
+			{
+				for (int nj = 0; nj < 3; ++nj)
+				{
+					Kj = ni * 3 + nj;
+					gKj = tets[i*4+ni] * 3 + nj;
+					//gK.coeffRef(gKi, gKj) += K(Ki, Kj) - 1;
+				}
+			}
+		}
+	}
+	//t_globalK += m_timeTest.restart();
+}
+
 __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, float density, float *Dm_inv, float *masses, float *ANs)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -56,15 +298,69 @@ __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, fl
 	}
 
 	memcpy(ANs + 9 * i, ANs_, sizeof(float) * 9);
-
-
 }
 
-__global__ void computeInnerForces()
+__global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
+								   float *Dm_inv, float *ANs, float *mus, float *lambdas,
+								   float *Us, float *Fhats, float *Vs, float *inner_forces)
 {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_tets)	return;
+	float Phat[3], Fhat[3], P[9], F[9], U[9], V[9], forces[9];
 
+	/*******************Compute Fhat************************/
+	// compute Ds
+	float *pos0 = nodes + 3 * tets[i * 4 + 0];
+	float *pos1 = nodes + 3 * tets[i * 4 + 1];
+	float *pos2 = nodes + 3 * tets[i * 4 + 2];
+	float *pos3 = nodes + 3 * tets[i * 4 + 3];
 
+	float Ds[9];
+	for (int k = 0; k < 3; ++k)
+	{
+		Ds[0 + k * 3] = *(pos1 + k) - *(pos0 + k);
+		Ds[1 + k * 3] = *(pos2 + k) - *(pos0 + k);
+		Ds[2 + k * 3] = *(pos3 + k) - *(pos0 + k);
+	}
+
+	// compute deformation gradient
+	cuMath::Matrix_Product_3(Ds, Dm_inv + 9 * i, F);
+
+	//svd
+	cuMath::Matrix_SVD_3(F, U, Fhat, V);
+	memcpy(Us + 9 * i, U, sizeof(float) * 9);
+	memcpy(Fhats + 3*i, Fhat, sizeof(float)*3);
+	memcpy(Vs+ 9*i, V,sizeof(float)*9);
+
+	computeEnergy2FhatGradient(mus[i], lambdas[i], Fhat, Phat);
+
+	cuMath::Matrix_Diagonal_Matrix_T_Product_3(U, Fhats, V, P);
+
+	cuMath::Matrix_Product_3(P, ANs + 9 * i, forces);
+
+	float *f0 = inner_forces + 3 * tets[i * 4 + 0];
+	float *f1 = inner_forces + 3 * tets[i * 4 + 1];
+	float *f2 = inner_forces + 3 * tets[i * 4 + 2];
+	float *f3 = inner_forces + 3 * tets[i * 4 + 3];
+
+	atomicAdd(f0, -forces[0] - forces[1] - forces[2]);
+	atomicAdd(f0 + 1, -forces[3] - forces[4] - forces[5]);
+	atomicAdd(f0 + 2, -forces[6] - forces[7] - forces[8]);
+
+	atomicAdd(f1, forces[0]);
+	atomicAdd(f1 + 1, forces[3]);
+	atomicAdd(f1 + 2, forces[6]);
+
+	atomicAdd(f2, forces[1]);
+	atomicAdd(f2 + 1, forces[4]);
+	atomicAdd(f2 + 2, forces[7]);
+
+	atomicAdd(f3, forces[2]);
+	atomicAdd(f3 + 1, forces[5]);
+	atomicAdd(f3 + 2, forces[7]);
 }
+
+
 
 __global__ void setDeviceArray(float *devicePtr, float v, int num)
 {

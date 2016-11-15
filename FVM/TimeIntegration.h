@@ -25,13 +25,13 @@ public:
 	void BackEuler(Eigen::MatrixXf & pos,
 		Eigen::MatrixXf & vel,
 		Eigen::MatrixXf & force,
-		Eigen::SparseMatrix<float> & K);
+		Eigen::SparseMatrix<float, Eigen::RowMajor> & K);
 
 	void BackEuler(Eigen::MatrixXf & pos,
 		Eigen::MatrixXf & restPos,
 		Eigen::MatrixXf & vel,
 		Eigen::MatrixXf & force,
-		Eigen::SparseMatrix<float> & K);
+		Eigen::SparseMatrix<float, Eigen::RowMajor> & K);
 
 	void setTimeStep(float t) { m_t = t; }
 	Eigen::MatrixXf  getPositions() { return m_positions; }
@@ -41,7 +41,7 @@ public:
 private:
 	void addGroundConstraints(float y, Eigen::MatrixXf & pos, Eigen::MatrixXf & vel);
 
-	Eigen::PardisoLDLT<Eigen::SparseMatrix<float>> m_pardiso_solver;
+	Eigen::PardisoLDLT<Eigen::SparseMatrix<float, Eigen::RowMajor>> m_pardiso_solver;
 
 	Eigen::MatrixXf m_positions;  // nodes' positions after one time step
 	Eigen::MatrixXf m_velocities; // nodes' velocities after one time step

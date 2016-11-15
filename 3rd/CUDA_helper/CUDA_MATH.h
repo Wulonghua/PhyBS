@@ -26,8 +26,12 @@
 ///////////////////////////////////////////////////////////////////////////////////////////
 //  CUDA_MATH library.
 ///////////////////////////////////////////////////////////////////////////////////////////
+
+
 #pragma once
 #include <cuda_runtime.h>
+#include "svd3_cuda.h"
+
 
 namespace cuMath{
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -162,4 +166,55 @@ void Matrix_Transose_3(float *A, float *R)
 	R[7] = A[5];
 	R[8] = A[8];
 }
+
+/**************More helper functions************************************************/
+// added by Longhua Wu
+//
+/***********************************************************************************/
+__host__ __device__ __forceinline__
+void Matrix_SVD_3(float *A, float *U, float *S, float *V)
+{
+	float T[6]; // parameters holder
+	svd(A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[8],
+		U[0], U[1], U[2], U[3], U[4], U[5], U[6], U[7], U[8],
+		S[0], T[0], T[1], T[2], S[1], T[3], T[4], T[5], S[2],
+		V[0], V[1], V[2], V[3], V[4], V[5], V[6], V[7], V[8]);
+}
+
+__host__ __device__ __forceinline__
+void Matrix_Diagonal_Matrix_T_Product_3(float *U, float *S, float *V, float *F)
+{
+	float tmp[9];
+	for (int i = 0; i < 3; ++i)
+	{
+		tmp[i] = U[i] * S[i];
+		tmp[i + 3] = U[i + 3] * S[i];
+		tmp[i + 6] = U[i + 6] * S[i];
+	}
+
+	Matrix_Product_T_3(tmp, V, F);
+}
+
+__host__ __device__ __forceinline__
+void Matrix_Diagonal_Matrix_Product_3(float *U, float *S, float *V, float *F)
+{
+	float tmp[9];
+	for (int i = 0; i < 3; ++i)
+	{
+		tmp[i] = U[i] * S[i];
+		tmp[i + 3] = U[i + 3] * S[i];
+		tmp[i + 6] = U[i + 6] * S[i];
+	}
+
+	Matrix_Product_3(tmp, V, F);
+}
+
+// solve Ax = b in which A is 2*2 matrix and x, b are 2 vetors
+__host__ __device__ __forceinline__
+void solveLinearSystem22(float *A, float *b, float *x)
+{
+	x[0] = (b[0] * A[3] - b[1] * A[1]) / (A[0] * A[3] - A[1] * A[2]);
+	x[1] = (b[1] - A[2] * x[0]) / A[3];
+}
+
 }

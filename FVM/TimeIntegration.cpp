@@ -102,7 +102,7 @@ void TimeIntegration::BackEuler( Eigen::MatrixXf & pos,
 void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 	Eigen::MatrixXf & vel,
 	Eigen::MatrixXf & force,
-	Eigen::SparseMatrix<float> & K)
+	Eigen::SparseMatrix<float, Eigen::RowMajor> & K)
 {
 	for (int i = 0; i < m_constraints.size(); ++i)
 	{
@@ -127,7 +127,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 
 	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
 
-	Eigen::ConjugateGradient<Eigen::SparseMatrix<float>> cg_solver;
+	Eigen::ConjugateGradient<Eigen::SparseMatrix<float>, Eigen::RowMajor> cg_solver;
 	cg_solver.compute(A);
 	cg_solver.setTolerance(1e-8);
 	v = cg_solver.solve(b);
@@ -150,7 +150,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 	Eigen::MatrixXf & restPos,
 	Eigen::MatrixXf & vel,
 	Eigen::MatrixXf & force,
-	Eigen::SparseMatrix<float> & K)
+	Eigen::SparseMatrix<float, Eigen::RowMajor> & K)
 {
 	for (int i = 0; i < m_constraints.size(); ++i)
 	{
@@ -171,7 +171,7 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 
 	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
 
-	//Eigen::PardisoLDLT<Eigen::SparseMatrix<float>> pardiso_solver;
+	//Eigen::PardisoLDLT<Eigen::SparseMatrix<float, Eigen::RowMajor>> pardiso_solver;
 	//omp_set_num_threads(8);
 	//mkl_set_num_threads(8);
 	mkl_set_dynamic(0);

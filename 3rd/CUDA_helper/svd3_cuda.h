@@ -13,6 +13,9 @@
 **
 **  13 Apr 2014
 **
+**  Modification:
+**  * Change rsqrt (CUDA 8.0 does not support this math function) to rsqrtf
+**  by Longhua Wu
 **************************************************************************/
 
 #ifndef SVD3_CUDA_H
@@ -24,15 +27,18 @@
 #define EPSILON 1e-6
 
 #include <cuda.h>
-#include "math.h" // CUDA math library
-
+#include <cuda_runtime.h>
+#include <stdlib.h>
+#include <math.h> 
+#include <device_functions.h>
+#include <helper_math.h>
 
 // CUDA's rsqrt seems to be faster than the inlined approximation?
 
 __host__ __device__ __forceinline__
 float accurateSqrt(float x)
 {
-    return x * rsqrt(x);
+    return x * rsqrtf(x);
 }
 
 __host__ __device__ __forceinline__
@@ -129,7 +135,7 @@ void approximateGivensQuaternion(float a11, float a12, float a22, float &ch, flo
     ch = 2*(a11-a22);
     sh = a12;
     bool b = _gamma*sh*sh < ch*ch;
-    float w = rsqrt(ch*ch+sh*sh);
+    float w = rsqrtf(ch*ch+sh*sh);
     ch=b?w*ch:_cstar;
     sh=b?w*sh:_sstar;
 }
@@ -258,7 +264,7 @@ void QRGivensQuaternion(float a1, float a2, float &ch, float &sh)
     ch = fabs(a1) + fmax(rho,epsilon);
     bool b = a1 < 0;
     condSwap(b,sh,ch);
-    float w = rsqrt(ch*ch+sh*sh);
+    float w = rsqrtf(ch*ch+sh*sh);
     ch *= w;
     sh *= w;
 }

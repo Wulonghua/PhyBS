@@ -42,8 +42,8 @@ public:
 
 	// compute stiffness Matrix
 	Eigen::MatrixXf computeStiffnessMatrix(int tetID);
-	Eigen::SparseMatrix<float> computeGlobalStiffnessMatrix();
-	Eigen::SparseMatrix<float> computeGlobalStiffnessMatrix(int num_Threads);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix();
+	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix(int num_Threads);
 
 	const float m_eps_singularvalue;
 
@@ -61,7 +61,7 @@ protected:
 
 	void allocateGlobalStiffnessMatrix();
 	std::vector<int> m_reserveSize;
-	Eigen::SparseMatrix<float> m_globalK;
+	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalK;
 
 	std::vector<float> m_mus;
 	std::vector<float> m_lambdas;

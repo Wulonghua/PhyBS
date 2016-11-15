@@ -71,7 +71,7 @@ void IsotropicMaterial::computeFhats()
 
 		computeSVD33modified(F, Fhat, U, V);
 		m_Fhats.col(i) = Fhat;
-		float t = Fhat[0];
+		//float t = Fhat[0];
 
 		m_Us.block<3, 3>(0, i * 3) = U;
 		m_Vs.block<3, 3>(0, i * 3) = V;
@@ -360,7 +360,7 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2()
 {
 	computeFhats();
 	int n = m_tetModel->getTetsNum();
-	Eigen::Vector3f Phat, Fhat, Fhat_inverseT;
+	Eigen::Vector3f Phat, Fhat;
 	float Phat_[3];
 
 	Eigen::Matrix3f P, U, V, forces;
@@ -518,14 +518,14 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 		m_reserveSize.push_back(m_globalK.col(i).sum());
 }
 
-Eigen::SparseMatrix<float> IsotropicMaterial::computeGlobalStiffnessMatrix()
+Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrix()
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
 
-	//Eigen::SparseMatrix<float> gK(3 * n, 3 * n);
+	//Eigen::SparseMatrix<float, Eigen::RowMajor> gK(3 * n, 3 * n);
 	//gK.reserve(m_reserveSize);
-	Eigen::SparseMatrix<float> gK = m_globalK;
+	Eigen::SparseMatrix<float, Eigen::RowMajor> gK = m_globalK;
 	Eigen::MatrixXf K;
 	int Ki, Kj, gKi, gKj;
 	//m_timeTest.restart();
@@ -565,11 +565,11 @@ Eigen::SparseMatrix<float> IsotropicMaterial::computeGlobalStiffnessMatrix()
 }
 
 //OpenMP parallel version
-Eigen::SparseMatrix<float> IsotropicMaterial::computeGlobalStiffnessMatrix(int num_Threads)
+Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrix(int num_Threads)
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
-	Eigen::SparseMatrix<float> gK = m_globalK;
+	Eigen::SparseMatrix<float, Eigen::RowMajor> gK = m_globalK;
 
 	//omp_lock_t lck;
 	//omp_init_lock(&lck);

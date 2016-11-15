@@ -95,7 +95,7 @@ void FVM::DoOneStep()
 	/******************************Back Euler integration**********************************/
 	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
 	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<float> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 	//std::cout << "before integration: " << std::endl;
 	//std::cout << "positions: " << std::endl;
 	//std::cout << m_tetMesh->getNodes() << std::endl;
@@ -180,7 +180,7 @@ void FVM::DoTest()
 	std::cout << "time to compute force: " << elapse << std::endl;
 
 
-	Eigen::SparseMatrix<float> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
 	elapse = ui.glWidget->restartTime();
 	std::cout << "time to compute K: " << elapse << std::endl;
@@ -192,6 +192,14 @@ void FVM::DoTest()
 	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
 	**************************************************************************************/
-	 m_cudaInterface = std::make_shared<CUDAInterface>(m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(),
-		m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000);
+	 //m_cudaInterface = std::make_shared<CUDAInterface>(m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(),
+		//m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000);
+
+
+	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+
+	sK.makeCompressed();
+	for (int i = 0; i < m_tetMesh->getNodesNum()*3+1; ++i)
+		std::cout << sK.outerIndexPtr()[i] << " ";
 }
