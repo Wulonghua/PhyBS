@@ -219,7 +219,8 @@ void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, flo
 	}
 }
 
-__global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs, float *mus, float *lambdas, float *gK)
+__global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs,
+											 float *mus, float *lambdas, int *kIDinCSRval, float *gK)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_tets)	return;
@@ -233,18 +234,17 @@ __global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs,
 		for (int fj = 0; fj < 3; ++fj)
 		{
 			Ki = fi * 3 + fj;
-			gKi = tets[i*4+fi] * 3 + fj;
 			for (int ni = 0; ni < 4; ++ni)
 			{
 				for (int nj = 0; nj < 3; ++nj)
 				{
 					Kj = ni * 3 + nj;
-					gKj = tets[i*4+ni] * 3 + nj;
-					//gK.coeffRef(gKi, gKj) += K(Ki, Kj) - 1;
+					atomicAdd(gK + kIDinCSRval[Ki + ni] + nj, -dfdx[Ki * 12 + Kj]);
 				}
 			}
 		}
 	}
+
 	//t_globalK += m_timeTest.restart();
 }
 
@@ -360,8 +360,6 @@ __global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
 	atomicAdd(f3 + 2, forces[7]);
 }
 
-
-
 __global__ void setDeviceArray(float *devicePtr, float v, int num)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -378,13 +376,18 @@ __global__ void checkData(float *devicePtr)
 	//printf("v: %f\n",devicePtr[7199]);
 }
 
-CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, int num_tets, const int *tets, const float youngs, const float nu, const float density) :
+CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, int num_tets, const int *tets,
+	const float youngs, const float nu, const float density,
+	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
 n_nodes(num_nodes), n_tets(num_tets)
 {
 	m_node_threadsPerBlock = 64;
 	m_node_blocksPerGrid = (num_nodes + m_node_threadsPerBlock - 1) / m_node_threadsPerBlock;
 	m_tet_threadsPerBlock = 64;
 	m_tet_blocksPerGrid = (num_tets + m_tet_threadsPerBlock - 1) / m_tet_threadsPerBlock;
+
+	csrMat.nnz = csr_nnz;
+	csrMat.m = csr_m;
 
 	// allocate device memory
 	cudaMalloc((void **)&d_tets, sizeof(int) * 4 * n_tets);
@@ -397,10 +400,20 @@ n_nodes(num_nodes), n_tets(num_tets)
 	cudaMalloc((void **)&d_Fhats, sizeof(float) * 3 * n_tets);
 	cudaMalloc((void **)&d_Us, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_Vs, sizeof(float) * 9 * n_tets);
+	cudaMalloc((void **)&csrMat.d_Valptr, sizeof(float)*csr_nnz);
+	cudaMalloc((void **)&csrMat.d_Colptr, sizeof(int)*csr_nnz);
+	cudaMalloc((void **)&csrMat.d_Rowptr, sizeof(int)*csr_m);
+	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
+	cudaMalloc((void **)&csrMat.d_kIDinCSRval, sizeof(int)*n_tets * 48);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_nodes, nodes, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_Valptr, csr_val, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_Colptr, csr_col, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_Rowptr, csr_row, sizeof(float)*csr_m, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_diagonalIdx, csr_diagonalIdx, sizeof(int)*n_nodes * 3, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_kIDinCSRval, csr_kIDinCSRval, sizeof(int)*n_tets * 48, cudaMemcpyHostToDevice);
 
 	//initialize weights to 0
 	cudaMemset(d_masses, 0, sizeof(float)*n_nodes);

@@ -487,7 +487,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
-	int gKi, gKj;
+	int gKi, gKj,Ki;
 
 	m_globalK.resize(3*n,3*n);
 	//if (n >= 10)
@@ -516,6 +516,36 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 
 	for (int i = 0; i < 3 * n; ++i)
 		m_reserveSize.push_back(m_globalK.col(i).sum());
+
+	m_globalK.makeCompressed();
+	//store index information for the plain CSR format which will be used in CUDA
+	int *pRow = m_globalK.outerIndexPtr();
+	int *pCol = m_globalK.innerIndexPtr();
+
+	// diagonal elements' indices in CSR value array.
+	m_diagonalIdx.resize(n * 3);
+	for (int i = 0; i < 3 * n; ++i)
+		m_diagonalIdx[i] = getCSRvalueIndex(i, i, pRow, pCol);
+
+	// 
+	m_kIDinCSRval.resize(m*48);
+	for (int i = 0; i < m; ++i)
+	{
+
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			for (int fj = 0; fj < 3; ++fj)
+			{
+				gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+				Ki = fi * 3 + fj;
+				for (int ni = 0; ni < 4; ++ni)
+				{
+					gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3;
+					m_kIDinCSRval[Ki + ni] = getCSRvalueIndex(gKi, gKj, pRow, pCol);
+				}
+			}
+		}
+	}
 }
 
 Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrix()
@@ -851,12 +881,4 @@ void IsotropicMaterial::computeDPDFij(const float *U, const float *Fhats, const 
 			dPdFij[m * 3 + n] = dPdFijMat(m, n);
 		}
 	}
-}
-
-Eigen::Matrix3f IsotropicMaterial::helperMatDiagonalMat(Eigen::Matrix3f A, const float *diagonal, Eigen::Matrix3f B)
-{
-	for (int i = 0; i < 3;++i)
-		A.col(i) *= diagonal[i];
-
-	return A*B;
 }

@@ -61,6 +61,8 @@ protected:
 
 	void allocateGlobalStiffnessMatrix();
 	std::vector<int> m_reserveSize;
+	std::vector<int> m_diagonalIdx;
+	std::vector<int> m_kIDinCSRval;
 	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalK;
 
 	std::vector<float> m_mus;
@@ -92,9 +94,36 @@ private:
 	void computeDP2DF(int tetID, const float *U, const float *Fhat, const float *V, float *dPdF);
 
 	Eigen::Matrix3f helperMatDiagonalMat(Eigen::Matrix3f A, const float *diagonal, Eigen::Matrix3f B);
-
+	int getCSRvalueIndex(int i, int j, int *rowPtr, int *colPtr);
 
 	//for test
 	QTime m_timeTest;
 };
 
+inline int IsotropicMaterial::getCSRvalueIndex(int i, int j, int *rowPtr, int *colPtr)
+{
+	int l = rowPtr[i];
+	int h = rowPtr[i + 1] - 1;
+	int k = (l + h) / 2;
+	int k_col;
+	while (l < h)
+	{
+		k_col = colPtr[k];
+		if (k_col == j)
+			break;
+		else if (k_col < j)
+			l = k + 1;
+		else if (k_col > j)
+			h = k - 1;
+		k = (l + h) / 2;
+	}
+	return k;
+}
+
+inline Eigen::Matrix3f IsotropicMaterial::helperMatDiagonalMat(Eigen::Matrix3f A, const float *diagonal, Eigen::Matrix3f B)
+{
+	for (int i = 0; i < 3; ++i)
+		A.col(i) *= diagonal[i];
+
+	return A*B;
+}
