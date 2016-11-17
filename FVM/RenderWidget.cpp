@@ -21,12 +21,12 @@ void RenderWidget::init()
 	restoreStateFromFile();
 	this->setSceneRadius(5);
 
-	render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
-	if (!render)
-	{
-		std::cerr << "Could not obtain required OpenGL context version";
-		exit(1);
-	}
+	//render = QOpenGLContext::currentContext()->versionFunctions<QOpenGLFunctions_4_5_Core>();
+	//if (!render)
+	//{
+	//	std::cerr << "Could not obtain required OpenGL context version";
+	//	exit(1);
+	//}
 }
 
 void RenderWidget::draw()

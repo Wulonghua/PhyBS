@@ -1,8 +1,8 @@
 #pragma once
 
 #include "QGLViewer\qglviewer.h"
-#include "qopenglfunctions_4_5_core.h"
-#include "qopenglcontext.h"
+//#include "qopenglfunctions_4_5_core.h"
+//#include "qopenglcontext.h"
 #include <QElapsedTimer>
 #include <QMouseEvent>
 #include <QKeyEvent>
@@ -45,7 +45,7 @@ private:
 
 	void drawTestCube();
 
-	QOpenGLFunctions_4_5_Core *render;    // reserve for modern glsl rendering
+	//QOpenGLFunctions_4_5_Core *render;    // reserve for modern glsl rendering
 	std::shared_ptr<TetMesh> gl_tetmesh;
 
 	QElapsedTimer m_time;
