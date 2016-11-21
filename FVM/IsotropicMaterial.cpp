@@ -492,7 +492,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	m_globalK.resize(3*n,3*n);
 	//if (n >= 10)
 	//	gK.reserve(Eigen::VectorXf::Constant(3 * n, 120));
-	m_reserveSize.reserve(3 * n);
+	//m_reserveSize.reserve(3 * n);
 
 	for (int i = 0; i < m; ++i)
 	{
@@ -514,8 +514,8 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 		}
 	}
 
-	for (int i = 0; i < 3 * n; ++i)
-		m_reserveSize.push_back(m_globalK.col(i).sum());
+	//for (int i = 0; i < 3 * n; ++i)
+	//	m_reserveSize.push_back(m_globalK.col(i).sum());
 
 	m_globalK.makeCompressed();
 	//store index information for the plain CSR format which will be used in CUDA
@@ -541,7 +541,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 				for (int ni = 0; ni < 4; ++ni)
 				{
 					gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3;
-					m_kIDinCSRval[Ki + ni] = getCSRvalueIndex(gKi, gKj, pRow, pCol);
+					m_kIDinCSRval[Ki*4 + ni] = getCSRvalueIndex(gKi, gKj, pRow, pCol);
 				}
 			}
 		}

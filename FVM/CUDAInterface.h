@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <iostream>
 #include <math.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -21,6 +22,9 @@ public:
 		int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval);
 	~CUDAInterface();
 
+	void doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta);
+	void computeInnerforces();
+	void computeGlobalStiffnessMatrix();
 	// first stroe for global stiffness matrix then for LHS of the linear system.
 	struct CSRmatrix
 	{
@@ -64,6 +68,6 @@ private:
 
 	  CUDALinearSolvers * cuLinearSolver;
 
-	  void doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta);
+
 
 };

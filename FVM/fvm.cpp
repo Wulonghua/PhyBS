@@ -12,6 +12,26 @@ FVM::FVM(QWidget *parent)
 	ui.glWidget->startTime();
 	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
 
+
+	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
+	//int num_tets, const int *tets, const float youngs, const float nu, const float density,
+	//int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval
+	std::vector<int> mask;
+	mask.resize(m_tetMesh->getNodesNum());
+	std::fill(mask.begin(), mask.end(), 0);
+	auto c = m_tetMesh->getConstraintIDs();
+	for (int i = 0; i < c.size(); i++)
+	{
+		mask[c[i]] = 1;
+	}
+	auto K = m_IsoMaterial->getGlobalK();
+	m_cudaInterface = std::make_shared<CUDAInterface>(
+	m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(), m_tetMesh->getRestPosition().data(), mask.data(),
+	m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000,
+	K.nonZeros(), K.rows(),K.valuePtr(),K.outerIndexPtr(),K.innerIndexPtr(),m_IsoMaterial->getDiagonalIdx().data(),m_IsoMaterial->getKIDinCSRval().data());
+
+	std::cout << "cuda initialized" << std::endl;
+
 	m_statusLabel = new QLabel(this);
 	m_statusLabel->setText(QStringLiteral(" #Nodes: %1	#Tets: %2	Time step: %3s")
 					.arg(m_tetMesh->getNodesNum())
@@ -162,7 +182,14 @@ void FVM::DoStop()
 
 void FVM::DoTest()
 {
-	//m_IsoMaterial->computeInnerForcesfromFhats();
+	//std::cout<< m_IsoMaterial->computeInnerForcesfromFhats2();
+
+	//m_tetMesh->writeMatrix("Us_CPU.csv", m_IsoMaterial->getUs());
+	//m_tetMesh->writeMatrix("Vs_CPU.csv", m_IsoMaterial->getVs());
+	//m_tetMesh->writeMatrix("Fhats.csv", m_IsoMaterial->getFhats());
+	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix();
+	//Eigen::MatrixXf K(sK);
+	//m_tetMesh->writeMatrix("K.csv", K);
 	//auto m = m_IsoMaterial->computeStiffnessMatrix(0);
 	//std::cout << m;
 	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats();
@@ -192,15 +219,27 @@ void FVM::DoTest()
 	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
 	**************************************************************************************/
-	 //m_cudaInterface = std::make_shared<CUDAInterface>(m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(),
-		//m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000);
+	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
+	//int num_tets, const int *tets, const float youngs, const float nu, const float density,
+	//int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval
+	//std::vector<int> mask;
+	//mask.resize(m_tetMesh->getNodesNum());
+	//std::fill(mask.begin(), mask.end(), 0);
+	//auto c = m_tetMesh->getConstraintIDs();
+	//for (int i = 0; i < c.size(); i++)
+	//{
+	//	mask[c[i]] = 1;
+	//}
+	//auto K = m_IsoMaterial->getGlobalK();
+	//m_cudaInterface = std::make_shared<CUDAInterface>(
+	//m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(), m_tetMesh->getRestPosition().data(), mask.data(),
+	//m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000,
+	//K.nonZeros(), K.rows(),K.valuePtr(),K.outerIndexPtr(),K.innerIndexPtr(),m_IsoMaterial->getDiagonalIdx().data(),m_IsoMaterial->getKIDinCSRval().data());
+
+	//std::cout << "cuda initialized" << std::endl;
+	m_cudaInterface->computeInnerforces();
+
+	m_cudaInterface->computeGlobalStiffnessMatrix();
 
 
-	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
-	//m_tetMesh->writeMatrix("force.csv", forces.transpose());
-	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
-
-	sK.makeCompressed();
-	//for (int i = 0; i < m_tetMesh->getNodesNum()*3+1; ++i)
-	//	std::cout << sK.outerIndexPtr()[i] << " ";
 }

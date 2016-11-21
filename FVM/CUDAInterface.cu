@@ -179,7 +179,7 @@ void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, flo
 
 	float dGdF[81];
 	float BT[9];
-	cuMath::Matrix_Inverse_3(AN, BT);
+	cuMath::Matrix_Transose_3(AN, BT);
 	cuMath::Matrix_Product(BT, dPdF, dGdF, 3,3,9);
 	cuMath::Matrix_Product(BT, dPdF + 27, dGdF + 27, 3, 3, 9);
 	cuMath::Matrix_Product(BT, dPdF + 54, dGdF + 54, 3, 3, 9);
@@ -219,15 +219,23 @@ void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, flo
 	}
 }
 
-__global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs,
-											 float *mus, float *lambdas, int *kIDinCSRval, float *gK)
+__global__ void computeGlobalK(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs, float *mus, float *lambdas, int *kIDinCSRval, float *gK)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_tets)	return;
 
-	int Ki, Kj;
+	int Ki, Kj,KIdx;
 	float dfdx[144];
 	compute_dfdx(Us + 9 * i, Fhats + 3 * i, Vs + 9 * i, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
+
+	//for (int ti = 0; ti < 12; ++ti)
+	//{
+	//	for (int tj = 0; tj < 12; ++tj)
+	//	{
+	//		printf(" %f", dfdx[ti * 12 + tj]);
+	//	}
+	//	printf("\n");
+	//}
 
 	for (int fi = 0; fi < 4; ++fi)
 	{
@@ -236,10 +244,11 @@ __global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs,
 			Ki = fi * 3 + fj;
 			for (int ni = 0; ni < 4; ++ni)
 			{
+				KIdx = Ki * 4 + ni;
 				for (int nj = 0; nj < 3; ++nj)
 				{
 					Kj = ni * 3 + nj;
-					atomicAdd(gK + kIDinCSRval[Ki + ni] + nj, -dfdx[Ki * 12 + Kj]);
+					atomicAdd(gK + kIDinCSRval[KIdx] + nj, -dfdx[Ki * 12 + Kj]);
 				}
 			}
 		}
@@ -300,7 +309,7 @@ __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, fl
 	memcpy(ANs + 9 * i, ANs_, sizeof(float) * 9);
 }
 
-__global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
+__global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
 								   float *Dm_inv, float *ANs, float *mus, float *lambdas,
 								   float *Us, float *Fhats, float *Vs, float *inner_forces)
 {
@@ -325,6 +334,18 @@ __global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
 
 	// compute deformation gradient
 	cuMath::Matrix_Product_3(Ds, Dm_inv + 9 * i, F);
+
+	//memset(F, 0, sizeof(float) * 9);
+	//F[0] = F[4] = F[8] = 1.0;
+
+	//for (int i = 0; i < 3; ++i)
+	//{
+	//	for (int j = 0; j < 3; ++j)
+	//	{
+	//		printf(" %.16f", F[i * 3 + j]);
+	//	}
+	//	printf("\n");
+	//}
 
 	//svd
 	cuMath::Matrix_SVD_3(F, U, Fhat, V);
@@ -357,7 +378,7 @@ __global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
 
 	atomicAdd(f3, forces[2]);
 	atomicAdd(f3 + 1, forces[5]);
-	atomicAdd(f3 + 2, forces[7]);
+	atomicAdd(f3 + 2, forces[8]);
 }
 
 __global__ void setRHSofLinearSystem(float *m, float *v, float t, int n, float *b)
@@ -416,6 +437,21 @@ __global__ void checkData(float *devicePtr)
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	//printf("v: %f\n",devicePtr[7199]);
 }
+
+// helper function to print array in m*n format.
+__global__ void printData(float *devicePtr, int m, int n)
+{
+	for (int i = 0; i < m; ++i)
+	{
+		for (int j = 0; j < n; ++j)
+		{
+			printf(" %f", devicePtr[i * n + j]);
+		}
+		printf("\n");
+	}
+}
+
+
 
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
@@ -497,6 +533,36 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_Us);
 	cudaFree(d_Vs);
 
+}
+
+void CUDAInterface::computeInnerforces()
+{
+	computeElasticForces << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_Us, d_Fhats, d_Vs, d_b);
+	cudaDeviceSynchronize();
+	//std::cout << "dUs:" << std::endl;
+	//printData<< <1, 1 >> >(d_Us, 3, 3);
+	//cudaDeviceSynchronize();
+
+	//std::cout << "dVs:" << std::endl;
+	//printData << <1, 1 >> >(d_Vs, 3, 3);
+	//cudaDeviceSynchronize();
+
+	//std::cout << "Fhats: " << std::endl;
+	//printData << <1, 1 >> >(d_Fhats, 3, 1);
+	//cudaDeviceSynchronize();
+
+	//std::cout << "forces: " << std::endl;
+	//printData << <1, 1 >> >(d_b, 4, 3);
+	//cudaDeviceSynchronize();
+}
+
+void CUDAInterface::computeGlobalStiffnessMatrix()
+{
+	//computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs,float *mus, float *lambdas, int *kIDinCSRval, float *gK)
+	computeGlobalK << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_Us, d_Fhats, d_Vs, d_tets, n_tets, d_ANs, d_Dm_inverses, d_mus, d_lambdas, d_kIDinCSRval, csrMat.d_Valptr);
+	cudaDeviceSynchronize();
+	printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+	cudaDeviceSynchronize();
 }
 
 void CUDAInterface::doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta)

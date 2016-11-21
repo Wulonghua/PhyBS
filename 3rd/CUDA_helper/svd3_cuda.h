@@ -12,10 +12,6 @@
 ** 	Implementation by: Eric Jang
 **
 **  13 Apr 2014
-**
-**  Modification:
-**  * Change rsqrt (CUDA 8.0 does not support this math function) to rsqrtf
-**  by Longhua Wu
 **************************************************************************/
 
 #ifndef SVD3_CUDA_H
@@ -33,12 +29,27 @@
 #include <device_functions.h>
 #include <helper_math.h>
 
-// CUDA's rsqrt seems to be faster than the inlined approximation?
+//__host__ __device__ __forceinline__
+//float rsqrt(float x) {
+//	// int ihalf = *(int *)&x - 0x00800000; // Alternative to next line,
+//	// float xhalf = *(float *)&ihalf;      // for sufficiently large nos.
+//	float xhalf = 0.5f*x;
+//	int i = *(int *)&x;          // View x as an int.
+//	// i = 0x5f3759df - (i >> 1);   // Initial guess (traditional).
+//	i = 0x5f375a82 - (i >> 1);   // Initial guess (slightly better).
+//	x = *(float *)&i;            // View i as float.
+//	x = x*(1.5f - xhalf*x*x);    // Newton step.
+//	// x = x*(1.5008908 - xhalf*x*x);  // Newton step for a balanced error.
+//	return x;
+//}
 
+
+// CUDA's rsqrt seems to be faster than the inlined approximation?
 __host__ __device__ __forceinline__
 float accurateSqrt(float x)
 {
-    return x * rsqrtf(x);
+	//return x * rsqrt(x);
+	return sqrtf(x);
 }
 
 __host__ __device__ __forceinline__
@@ -120,7 +131,7 @@ float &m31, float &m32, float &m33
     float qwy = w*y;
     float qwz = w*z;
 
-     m11=1 - 2*(qyy + qzz); m12=2*(qxy - qwz); m13=2*(qxz + qwy);
+    m11=1 - 2*(qyy + qzz); m12=2*(qxy - qwz); m13=2*(qxz + qwy);
     m21=2*(qxy + qwz); m22=1 - 2*(qxx + qzz); m23=2*(qyz - qwx);
     m31=2*(qxz - qwy); m32=2*(qyz + qwx); m33=1 - 2*(qxx + qyy);
 }

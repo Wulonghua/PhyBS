@@ -45,6 +45,14 @@ public:
 	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix();
 	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix(int num_Threads);
 
+	std::vector<int> & getDiagonalIdx() { return m_diagonalIdx; }
+	std::vector<int> & getKIDinCSRval() { return m_kIDinCSRval; }
+	Eigen::SparseMatrix<float, Eigen::RowMajor> & getGlobalK() { return m_globalK; }
+
+	Eigen::MatrixXf & getFhats() { return m_Fhats; }
+	Eigen::MatrixXf & getUs() { return m_Us; }
+	Eigen::MatrixXf & getVs() { return m_Vs; }
+
 	const float m_eps_singularvalue;
 
 protected:
@@ -60,7 +68,7 @@ protected:
 	virtual float ddhEnergy(float x, const float & mu, const float & lambda) = 0;
 
 	void allocateGlobalStiffnessMatrix();
-	std::vector<int> m_reserveSize;
+	//std::vector<int> m_reserveSize;
 	std::vector<int> m_diagonalIdx;
 	std::vector<int> m_kIDinCSRval;
 	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalK;
