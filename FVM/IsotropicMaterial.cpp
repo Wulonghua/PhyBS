@@ -612,6 +612,9 @@ Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStif
 		int Ki, Kj, gKi, gKj;
 
 		K = computeStiffnessMatrix(i);
+		//if (i == 0)
+		//	m_tetModel->writeMatrix("K0_CPU.csv", K);
+
 		for (int fi = 0; fi < 4; ++fi)
 		{
 			for (int fj = 0; fj < 3; ++fj)

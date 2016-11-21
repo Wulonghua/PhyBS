@@ -66,17 +66,19 @@ N(rowNum), nz(nnz)
 
 CUDALinearSolvers::~CUDALinearSolvers()
 {
-	
-	
+	cusparseDestroy(cusparseHandle);
+	cublasDestroy(cublasHandle);
+	cudaFree(d_p);
+	cudaFree(d_Ax);
 }
 
-void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_x, float *d_r)
+void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x)
 {
 	float alpha = 1.0;
 	float alpham1 = -1.0;
 	float beta = 0.0;
 	float r0 = 0.0;
-	float a, b, na, r0, r1, dot;
+	float a, b, na, r1, dot;
 	const float tol = 1e-5f;
 	const int max_iter = 10000;
 

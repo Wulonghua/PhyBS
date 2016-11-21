@@ -197,9 +197,10 @@ void FVM::DoTest()
 
 
 	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+	//m_tetMesh->writeMatrix("force.csv", forces.transpose());
 	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
 	sK.makeCompressed();
-	for (int i = 0; i < m_tetMesh->getNodesNum()*3+1; ++i)
-		std::cout << sK.outerIndexPtr()[i] << " ";
+	//for (int i = 0; i < m_tetMesh->getNodesNum()*3+1; ++i)
+	//	std::cout << sK.outerIndexPtr()[i] << " ";
 }

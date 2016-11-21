@@ -21,12 +21,16 @@ public:
 		CUDALinearSolvers(int rowNum, int nnz);
 		~CUDALinearSolvers();
 		
-		void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_x, float *d_r);
-		
+		void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
+
+
+		int N;        // number of A's rows
+		int nz;       // number of A's non-zero entries.
+
+		/* CUBLAS context */
+		cublasHandle_t cublasHandle;
+		cublasStatus_t cublasStatus;
 private:
-	/* CUBLAS context */
-    cublasHandle_t cublasHandle;
-    cublasStatus_t cublasStatus;
 
     /* Create CUSPARSE context */
     cusparseHandle_t cusparseHandle;
@@ -34,9 +38,6 @@ private:
 
     /* Description of the A matrix*/
     cusparseMatDescr_t descr;
-
-	int N;  // number of A's rows
-	int nz; // number of A's non-zero entries.
 
 	// followings are temped device memory for later conjugate gradient solver.
 	float *d_p;

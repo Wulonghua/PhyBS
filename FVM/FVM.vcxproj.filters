@@ -102,12 +102,18 @@
     <ClInclude Include="CUDAInterface.h">
       <Filter>CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="CUDALinearSolvers.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FVM.rc" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CUDAInterface.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
+    <CudaCompile Include="CUDALinearSolvers.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
   </ItemGroup>

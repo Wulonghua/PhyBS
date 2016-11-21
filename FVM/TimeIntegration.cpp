@@ -171,9 +171,6 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 
 	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
 
-	//Eigen::PardisoLDLT<Eigen::SparseMatrix<float, Eigen::RowMajor>> pardiso_solver;
-	//omp_set_num_threads(8);
-	//mkl_set_num_threads(8);
 	mkl_set_dynamic(0);
 	mkl_set_num_threads(4);
 	m_pardiso_solver.compute(A);

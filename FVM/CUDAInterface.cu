@@ -225,7 +225,7 @@ __global__ void computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs,
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_tets)	return;
 
-	int Ki, Kj, gKi, gKj;
+	int Ki, Kj;
 	float dfdx[144];
 	compute_dfdx(Us + 9 * i, Fhats + 3 * i, Vs + 9 * i, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
 
@@ -360,12 +360,53 @@ __global__ void computeInnerForces(float *nodes, int *tets, int num_tets,
 	atomicAdd(f3 + 2, forces[7]);
 }
 
+__global__ void setRHSofLinearSystem(float *m, float *v, float t, int n, float *b)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	b[3 * i] = b[3 * i] * t + m[i] * v[3 * i];
+	b[3 * i + 1] = (b[3 * i + 1] - 9.8 * m[i])*t + m[i] * v[3 * i + 1];
+	b[3 * i + 2] = b[3 * i + 2] * t + m[i] * v[3 * i + 2];
+
+}
+
+__global__ void setLHSofLinearSystem(float *m, float t, float dumpingAlpha, CUDAInterface::CSRmatrix &A)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= A.m)	return;
+	int id;
+	for (int j = 0; j < 3; ++j)
+	{
+		id = i * 3 + j;
+		A.d_Valptr[A.d_diagonalIdx[j]] += m[i] * (1 + dumpingAlpha * t);
+	}
+}
+
 __global__ void setDeviceArray(float *devicePtr, float v, int num)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num)	return;
 
 	devicePtr[i] = v;
+}
+
+__global__ void setDeviceArray(float *devicePtr, int * mask, float v, int num)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num)	return;
+
+	if (mask[i] > 0)
+		devicePtr[i] = v;
+}
+
+// to prevent precision losing, split scale to s1 * s2
+__global__ void scaleDeviceArray(float *devicePtr, float s1, float s2, int num)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num)	return;
+
+	devicePtr[i] = (devicePtr[i]*s1)*s2;
 }
 
 
@@ -376,8 +417,8 @@ __global__ void checkData(float *devicePtr)
 	//printf("v: %f\n",devicePtr[7199]);
 }
 
-CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, int num_tets, const int *tets,
-	const float youngs, const float nu, const float density,
+CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
+	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
 n_nodes(num_nodes), n_tets(num_tets)
 {
@@ -387,12 +428,17 @@ n_nodes(num_nodes), n_tets(num_tets)
 	m_tet_blocksPerGrid = (num_tets + m_tet_threadsPerBlock - 1) / m_tet_threadsPerBlock;
 
 	csrMat.nnz = csr_nnz;
-	csrMat.m = csr_m;
+	csrMat.m = csr_m;    // matrix's row number
+
+	cuLinearSolver = new CUDALinearSolvers(csr_m, csr_nnz);
 
 	// allocate device memory
 	cudaMalloc((void **)&d_tets, sizeof(int) * 4 * n_tets);
 	cudaMalloc((void **)&d_nodes, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_restPoses, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_velocities, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_masses, sizeof(float) * n_nodes);
+	cudaMalloc((void **)&d_constraintsMask, sizeof(int) * n_nodes);
 	cudaMalloc((void **)&d_ANs, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_Dm_inverses, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_mus, sizeof(float) * n_tets);
@@ -404,19 +450,23 @@ n_nodes(num_nodes), n_tets(num_tets)
 	cudaMalloc((void **)&csrMat.d_Colptr, sizeof(int)*csr_nnz);
 	cudaMalloc((void **)&csrMat.d_Rowptr, sizeof(int)*csr_m);
 	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
-	cudaMalloc((void **)&csrMat.d_kIDinCSRval, sizeof(int)*n_tets * 48);
+	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
+	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_nodes, nodes, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_restPoses, restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_constraintsMask, constraintsMask, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_Valptr, csr_val, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_Colptr, csr_col, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_Rowptr, csr_row, sizeof(float)*csr_m, cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_diagonalIdx, csr_diagonalIdx, sizeof(int)*n_nodes * 3, cudaMemcpyHostToDevice);
-	cudaMemcpy(csrMat.d_kIDinCSRval, csr_kIDinCSRval, sizeof(int)*n_tets * 48, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_kIDinCSRval, csr_kIDinCSRval, sizeof(int)*n_tets * 48, cudaMemcpyHostToDevice);
 
 	//initialize weights to 0
 	cudaMemset(d_masses, 0, sizeof(float)*n_nodes);
+	cudaMemset(d_velocities, 0, sizeof(float)*n_nodes*3);
 
 	// currently using homogenous material
 	float mu = 0.5 * youngs / (1 + nu);
@@ -427,9 +477,12 @@ n_nodes(num_nodes), n_tets(num_tets)
 	setDeviceArray << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_lambdas, lambda, n_tets);
 	
 	// compute d_Dm_inverses, d_masses, and d_ANs
-	compute_DmInv_ANs_Mass << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_nodes, d_tets,
+	compute_DmInv_ANs_Mass << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_restPoses, d_tets,
 																 n_tets, density, d_Dm_inverses,
-																				d_masses, d_ANs);	
+																				d_masses, d_ANs);
+	// set fixed nodes to relative large masses
+	setDeviceArray << < m_node_blocksPerGrid, m_node_threadsPerBlock >> > (d_masses, d_constraintsMask, 1e8, n_nodes);
+
 }
 
 CUDAInterface::~CUDAInterface()
@@ -443,5 +496,22 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_Fhats);
 	cudaFree(d_Us);
 	cudaFree(d_Vs);
+
 }
 
+void CUDAInterface::doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta)
+{
+	setRHSofLinearSystem << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_velocities, timestep, n_nodes, d_b);
+	
+	int threadsPerBlock = 64;
+	int blocksPerGrid = (csrMat.nnz + threadsPerBlock - 1) / threadsPerBlock;
+	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(csrMat.d_Valptr, timestep + dumpingBelta, timestep, csrMat.nnz);
+
+	setLHSofLinearSystem << <m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, timestep, dumpingAlpha, csrMat);
+
+	cudaMemset(d_velocities, 0, sizeof(float) * n_nodes * 3);
+	cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+
+	// update positions. 
+	cublasSaxpy(cuLinearSolver->cublasHandle, n_nodes * 3, &timestep, d_velocities, 1, d_nodes, 1);
+}
