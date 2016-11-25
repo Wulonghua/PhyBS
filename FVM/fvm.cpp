@@ -113,46 +113,23 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
-	//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
-	Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
-	//std::cout << "before integration: " << std::endl;
-	//std::cout << "positions: " << std::endl;
-	//std::cout << m_tetMesh->getNodes() << std::endl;
+	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+	////Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
-	//std::cout << "forces: " << std::endl;
-	//std::cout << m_tetMesh->getForces() << std::endl;
-
-	//std::cout << "velocity: " << std::endl;
-	//std::cout << m_tetMesh->getVelocities() << std::endl;
-
-	//std::cout << std::endl;
-
-	//m_integrator->BackEuler(m_tetMesh->getNodes(),
+	//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
 	//	m_tetMesh->getVelocities(),
 	//	forces, sK);
 
-	m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-		m_tetMesh->getVelocities(),
-		forces, sK);
+	m_cudaInterface->computeInnerforces();
 
-	//m_tetMesh->getNodes().col(0) = Eigen::Vector3f(0.1, 0.1, 0.1);
-	//m_tetMesh->getVelocities().col(0) = Eigen::Vector3f::Zero();
-	
-	
+	m_cudaInterface->computeGlobalStiffnessMatrix();
 
-	//m_nodes.col(1) = Eigen::Vector3f(-1.0, 1.0, -1.0);
-	//m_velocities.col(1) = Eigen::Vector3f::Zero();
+	if (++m_frameID ==1)
+		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), true);
+	else
+		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), false);
 
-	//std::cout << "after integration: " << std::endl;
-	//std::cout << "positions: " << std::endl;
-	//std::cout << m_tetMesh->getNodes() << std::endl;
-
-	//std::cout << "forces: " << std::endl;
-	//std::cout << m_tetMesh->getForces() << std::endl;
-
-	//std::cout << "velocity: " << std::endl;
-	//std::cout << m_tetMesh->getVelocities() << std::endl;
 
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
 	//m_tetMesh->writeNodes(node_file);
@@ -235,11 +212,40 @@ void FVM::DoTest()
 	//m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(), m_tetMesh->getRestPosition().data(), mask.data(),
 	//m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000,
 	//K.nonZeros(), K.rows(),K.valuePtr(),K.outerIndexPtr(),K.innerIndexPtr(),m_IsoMaterial->getDiagonalIdx().data(),m_IsoMaterial->getKIDinCSRval().data());
-
 	//std::cout << "cuda initialized" << std::endl;
-	m_cudaInterface->computeInnerforces();
 
-	m_cudaInterface->computeGlobalStiffnessMatrix();
+	//float NodePtr[12] = {0.0};
+	//for (int i = 0; i < 10; i++)
+	//{
+
+
+	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+
+	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+
+	//std::cout << "K: " << std::endl;
+	//std::cout << sK << std::endl;
+
+	//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+	//	m_tetMesh->getVelocities(),
+	//	forces, sK);
+
+
+
+
+		m_cudaInterface->computeInnerforces();
+
+		m_cudaInterface->computeGlobalStiffnessMatrix();
+
+		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), false);
+
+		ui.glWidget->update();
+
+		//std::cout << m_tetMesh->getNodes();
+	//}
+	//for (int i = 0; i < 12; ++i)
+	//	std::cout << NodePtr[i] << " ";
+	//std::cout << std::endl;
 
 
 }

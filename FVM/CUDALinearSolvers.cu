@@ -38,19 +38,23 @@ CUDALinearSolvers::CUDALinearSolvers(int rowNum, int nnz):
 N(rowNum), nz(nnz)
 {
 	/* Create CUBLAS context */
-    cublasHandle = 0;
+    //cublasHandle = 0;
     cublasStatus = cublasCreate(&cublasHandle);
 
     checkCudaErrors(cublasStatus);
 
     /* Create CUSPARSE context */
-	cusparseHandle = 0;
+	//cusparseHandle = 0;
     cusparseStatus = cusparseCreate(&cusparseHandle);
 
     checkCudaErrors(cusparseStatus);
 
+	/* Create CUSOLVER context*/
+	cusolverStatus = cusolverSpCreate(&cusolverHandle);
+	checkCudaErrors(cusolverStatus);
+
     /* Description of the A matrix*/
-    descr = 0;
+    //descr = 0;
     cusparseStatus = cusparseCreateMatDescr(&descr);
 
     checkCudaErrors(cusparseStatus);
@@ -68,8 +72,17 @@ CUDALinearSolvers::~CUDALinearSolvers()
 {
 	cusparseDestroy(cusparseHandle);
 	cublasDestroy(cublasHandle);
+	cusolverSpDestroy(cusolverHandle);
 	cudaFree(d_p);
 	cudaFree(d_Ax);
+}
+
+void CUDALinearSolvers::directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x)
+{
+	int reorder = 0; //no reordering
+	int singularity = 0;
+	cusolverStatus = cusolverSpScsrlsvchol(cusolverHandle, N, nz, descr, d_val, d_row, d_col, d_b, 1e-3, reorder, d_x, &singularity);
+	checkCudaErrors(cusolverStatus);
 }
 
 void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x)
@@ -79,7 +92,7 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 	float beta = 0.0;
 	float r0 = 0.0;
 	float a, b, na, r1, dot;
-	const float tol = 1e-5f;
+	const float tol = 1e-6f;
 	const int max_iter = 10000;
 
 	// compute A*x
@@ -118,7 +131,7 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 		r0 = r1;
 		cublasStatus = cublasSdot(cublasHandle, N, d_r, 1, d_r, 1, &r1);
 		cudaThreadSynchronize();
-		printf("iteration = %3d, residual = %e\n", k, sqrt(r1));
+		//printf("iteration = %3d, residual = %e\n", k, sqrt(r1));
 		k++;
 	}
 	

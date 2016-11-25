@@ -165,12 +165,18 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 		A.coeffRef(i, i) += (1 + m_t*m_dumpingAlpha)*m_masses(i);
 	}
 
+	//std::cout << "LHS:" << std::endl;
+	//std::cout << A << std::endl;
+
 	Eigen::Map<Eigen::VectorXf> p(pos.data(), n_nodes * 3);
 	Eigen::Map<Eigen::VectorXf> v(vel.data(), n_nodes * 3);
 	Eigen::Map<Eigen::VectorXf> f(force.data(), n_nodes * 3);
 
 	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
-
+	
+	//for (int i = 0; i < 3; ++i)
+	//	printf("%.10f %.10f\n", v[i], b[i]);
+	
 	mkl_set_dynamic(0);
 	mkl_set_num_threads(4);
 	m_pardiso_solver.compute(A);

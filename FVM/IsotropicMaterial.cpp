@@ -398,6 +398,8 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2(int num_Threads)
 	computeFhats(num_Threads);
 	int n = m_tetModel->getTetsNum();
 	m_tetModel->initForcesFromGravityExternals();
+
+	//std::cout << m_tetModel->getForces() << std::endl;
 	
 	omp_lock_t lck;
 	omp_init_lock(&lck);

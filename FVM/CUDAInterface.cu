@@ -309,6 +309,25 @@ __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, fl
 	memcpy(ANs + 9 * i, ANs_, sizeof(float) * 9);
 }
 
+__global__ void addFixContraintsAndGravity(float *nodes, float *rest, float *gravity, float *inner_forces, int *mask, int n)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	if (mask[i] > 0)
+	{
+		inner_forces[3 * i + 0] = 1e8 *(rest[3 * i + 0] - nodes[3 * i + 0]);
+		inner_forces[3 * i + 1] = 1e8 *(rest[3 * i + 1] - nodes[3 * i + 1]);
+		inner_forces[3 * i + 2] = 1e8 *(rest[3 * i + 2] - nodes[3 * i + 2]);
+		
+	}
+	else
+	{
+		inner_forces[3 * i + 1] += gravity[i];
+	}
+
+}
+
 __global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
 								   float *Dm_inv, float *ANs, float *mus, float *lambdas,
 								   float *Us, float *Fhats, float *Vs, float *inner_forces)
@@ -386,22 +405,62 @@ __global__ void setRHSofLinearSystem(float *m, float *v, float t, int n, float *
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= n)	return;
 
-	b[3 * i] = b[3 * i] * t + m[i] * v[3 * i];
-	b[3 * i + 1] = (b[3 * i + 1] - 9.8 * m[i])*t + m[i] * v[3 * i + 1];
+	//if (i == 0)
+	//{
+	//	printf("%.10f %.10f\n", b[3 * i + 0], v[3*i+0]);
+	//	printf("%.10f %.10f\n", b[3 * i + 1], v[3*i+1]);
+	//	printf("%.10f %.10f\n", b[3 * i + 2], v[3*i+2]);
+	//}
+
+	b[3 * i + 0] = b[3 * i + 0] * t + m[i] * v[3 * i + 0];
+	b[3 * i + 1] = b[3 * i + 1] * t + m[i] * v[3 * i + 1];
 	b[3 * i + 2] = b[3 * i + 2] * t + m[i] * v[3 * i + 2];
+
+	//if (i == 0)
+	//{
+	//	printf("%f\n", b[3 * i + 0]);
+	//	printf("%f\n", b[3 * i + 1]);
+	//	printf("%f\n", b[3 * i + 2]);
+	//}
 
 }
 
-__global__ void setLHSofLinearSystem(float *m, float t, float dumpingAlpha, CUDAInterface::CSRmatrix &A)
+// do not use this function which has unsolved strange bug
+__global__ void setLHSofLinearSystem(float *m, float t, float dumpingAlpha, int n, float *Valptr, int *diagonalIdx)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= A.m)	return;
-	int id;
-	for (int j = 0; j < 3; ++j)
+	if (i >= n)	return;
+	float tmp = m[i] * (1 + dumpingAlpha *t);
+	//for (int j = 0; j < 3; ++j)
+	//{
+	//	id = i * 3 + j;
+	//	Valptr[diagonalIdx[id]] += m[i] * (1 + dumpingAlpha * t);
+	//}
+
+	/*********************Strange bug here.******************************/
+	
+	if (i == 0)
 	{
-		id = i * 3 + j;
-		A.d_Valptr[A.d_diagonalIdx[j]] += m[i] * (1 + dumpingAlpha * t);
+		Valptr[diagonalIdx[i * 3 + 0]] += tmp;
+		Valptr[diagonalIdx[i * 3 + 1]] += tmp;
+		Valptr[diagonalIdx[i * 3 + 2]] += tmp;
 	}
+}
+
+__global__ void setLHSofLinearSystem(float *m_s, int n, float *Valptr, int *diagonalIdx)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	Valptr[diagonalIdx[i]] += m_s[i];
+}
+
+__global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	mass_s[3 * i + 0] = mass_s[3 * i + 1] = mass_s[3 * i + 2] = mass[i] * s;
 }
 
 __global__ void setDeviceArray(float *devicePtr, float v, int num)
@@ -427,7 +486,15 @@ __global__ void scaleDeviceArray(float *devicePtr, float s1, float s2, int num)
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num)	return;
 
-	devicePtr[i] = (devicePtr[i]*s1)*s2;
+	devicePtr[i] = devicePtr[i]*s1*s2;
+}
+
+__global__ void scaleDeviceArray(float *devicePtr, float * deviceScaledPtr, float s, int n)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	deviceScaledPtr[i] = devicePtr[i] * s;
 }
 
 
@@ -451,12 +518,24 @@ __global__ void printData(float *devicePtr, int m, int n)
 	}
 }
 
+__global__ void printData(int *devicePtr, int m, int n)
+{
+	for (int i = 0; i < m; ++i)
+	{
+		for (int j = 0; j < n; ++j)
+		{
+			printf(" %d", devicePtr[i * n + j]);
+		}
+		printf("\n");
+	}
+}
+
 
 
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
-n_nodes(num_nodes), n_tets(num_tets)
+	n_nodes(num_nodes), n_tets(num_tets), m_dumpingAlpha(0.03), m_dumpingBelta(0.03), m_timestep(0.03)
 {
 	m_node_threadsPerBlock = 64;
 	m_node_blocksPerGrid = (num_nodes + m_node_threadsPerBlock - 1) / m_node_threadsPerBlock;
@@ -474,6 +553,8 @@ n_nodes(num_nodes), n_tets(num_tets)
 	cudaMalloc((void **)&d_restPoses, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_velocities, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_masses, sizeof(float) * n_nodes);
+	cudaMalloc((void **)&d_gravities, sizeof(float) * n_nodes);
+	cudaMalloc((void **)&d_masses_scaled, sizeof(float) * n_nodes*3);
 	cudaMalloc((void **)&d_constraintsMask, sizeof(int) * n_nodes);
 	cudaMalloc((void **)&d_ANs, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_Dm_inverses, sizeof(float) * 9 * n_tets);
@@ -484,7 +565,7 @@ n_nodes(num_nodes), n_tets(num_tets)
 	cudaMalloc((void **)&d_Vs, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&csrMat.d_Valptr, sizeof(float)*csr_nnz);
 	cudaMalloc((void **)&csrMat.d_Colptr, sizeof(int)*csr_nnz);
-	cudaMalloc((void **)&csrMat.d_Rowptr, sizeof(int)*csr_m);
+	cudaMalloc((void **)&csrMat.d_Rowptr, sizeof(int)*(csr_m+1));
 	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
 	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
 	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
@@ -495,8 +576,8 @@ n_nodes(num_nodes), n_tets(num_tets)
 	cudaMemcpy(d_restPoses, restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_constraintsMask, constraintsMask, sizeof(int) * n_nodes, cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_Valptr, csr_val, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
-	cudaMemcpy(csrMat.d_Colptr, csr_col, sizeof(float)*csr_nnz, cudaMemcpyHostToDevice);
-	cudaMemcpy(csrMat.d_Rowptr, csr_row, sizeof(float)*csr_m, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_Colptr, csr_col, sizeof(int)*csr_nnz, cudaMemcpyHostToDevice);
+	cudaMemcpy(csrMat.d_Rowptr, csr_row, sizeof(int)*(csr_m+1), cudaMemcpyHostToDevice);
 	cudaMemcpy(csrMat.d_diagonalIdx, csr_diagonalIdx, sizeof(int)*n_nodes * 3, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_kIDinCSRval, csr_kIDinCSRval, sizeof(int)*n_tets * 48, cudaMemcpyHostToDevice);
 
@@ -511,14 +592,27 @@ n_nodes(num_nodes), n_tets(num_tets)
 	//initialize d_mus and d_lambda
 	setDeviceArray << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_mus, mu, n_tets);
 	setDeviceArray << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_lambdas, lambda, n_tets);
-	
+	cudaDeviceSynchronize();
 	// compute d_Dm_inverses, d_masses, and d_ANs
 	compute_DmInv_ANs_Mass << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_restPoses, d_tets,
 																 n_tets, density, d_Dm_inverses,
 																				d_masses, d_ANs);
+	cudaDeviceSynchronize();
+	scaleDeviceArray << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_gravities, -9.8, n_nodes);
+	cudaDeviceSynchronize();
 	// set fixed nodes to relative large masses
 	setDeviceArray << < m_node_blocksPerGrid, m_node_threadsPerBlock >> > (d_masses, d_constraintsMask, 1e8, n_nodes);
+	cudaDeviceSynchronize();
+	//std::cout << "mass: " << std::endl;
+	//printData << <1, 1 >> >(d_masses, 4, 1);
+	//cudaDeviceSynchronize();
 
+	setMassScaled << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_masses_scaled, (1+m_dumpingAlpha*m_timestep), n_nodes);
+	cudaDeviceSynchronize();
+
+	//std::cout << "scaled mass: " << std::endl;
+	//printData << <1, 1 >> >(d_masses_scaled, 4, 3);
+	//cudaDeviceSynchronize();
 }
 
 CUDAInterface::~CUDAInterface()
@@ -532,12 +626,20 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_Fhats);
 	cudaFree(d_Us);
 	cudaFree(d_Vs);
-
+	cudaFree(d_constraintsMask);
+	cudaFree(d_restPoses);
+	cudaFree(d_velocities);
+	cudaFree(d_masses);
+	cudaFree(d_gravities);
+	cudaFree(d_masses_scaled);    
 }
 
 void CUDAInterface::computeInnerforces()
 {
 	computeElasticForces << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_Us, d_Fhats, d_Vs, d_b);
+	cudaDeviceSynchronize();
+
+	addFixContraintsAndGravity << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_nodes, d_restPoses, d_gravities, d_b, d_constraintsMask, n_nodes);
 	cudaDeviceSynchronize();
 	//std::cout << "dUs:" << std::endl;
 	//printData<< <1, 1 >> >(d_Us, 3, 3);
@@ -558,26 +660,71 @@ void CUDAInterface::computeInnerforces()
 
 void CUDAInterface::computeGlobalStiffnessMatrix()
 {
-	//computeGlobalStiffnessMatrix(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs,float *mus, float *lambdas, int *kIDinCSRval, float *gK)
+	
 	computeGlobalK << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_Us, d_Fhats, d_Vs, d_tets, n_tets, d_ANs, d_Dm_inverses, d_mus, d_lambdas, d_kIDinCSRval, csrMat.d_Valptr);
 	cudaDeviceSynchronize();
-	printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
-	cudaDeviceSynchronize();
+	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
 }
 
-void CUDAInterface::doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta)
+void CUDAInterface::doBackEuler(float *hostNode, bool noElastic)
 {
-	setRHSofLinearSystem << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_velocities, timestep, n_nodes, d_b);
-	
+	if (noElastic)
+		cudaMemset(d_b, 0, sizeof(float) * 12);
+
+	std::cout << "velocities: " << std::endl;
+	printData << <1, 1 >> >(d_velocities, 12, 1);
+	cudaDeviceSynchronize();
+
+	//std::cout << "masses: " << std::endl;
+	//printData << <1, 1 >> >(d_masses, 1, 4);
+	//cudaDeviceSynchronize();
+
+	//cudaMemcpy(csrMat.d_Valptr, tmp, sizeof(float) * 144, cudaMemcpyHostToDevice);
+	//cudaDeviceSynchronize();
+	//std::cout << "LHS: " << std::endl;
+	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
+
+	setRHSofLinearSystem << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_velocities, m_timestep, n_nodes, d_b);
+	cudaDeviceSynchronize();
 	int threadsPerBlock = 64;
 	int blocksPerGrid = (csrMat.nnz + threadsPerBlock - 1) / threadsPerBlock;
-	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(csrMat.d_Valptr, timestep + dumpingBelta, timestep, csrMat.nnz);
+	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(csrMat.d_Valptr, m_timestep + m_dumpingBelta, m_timestep, csrMat.nnz);
+	cudaDeviceSynchronize();
 
-	setLHSofLinearSystem << <m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, timestep, dumpingAlpha, csrMat);
+	setLHSofLinearSystem << <m_node_blocksPerGrid, m_node_threadsPerBlock * 3 >> >(d_masses_scaled, csrMat.m, csrMat.d_Valptr, csrMat.d_diagonalIdx);
+	cudaDeviceSynchronize();
 
-	cudaMemset(d_velocities, 0, sizeof(float) * n_nodes * 3);
-	cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+	//std::cout << "mass: " << std::endl;
+	//printData << <1, 1 >> >(d_masses, 4, 1);
+	//cudaDeviceSynchronize();
 
+	//std::cout << "diagonalIdx: " << std::endl;
+	//printData << <1, 1 >> >(csrMat.d_diagonalIdx, 1, 12);
+	//cudaDeviceSynchronize();
+	//
+
+	//std::cout << "RHS: " << std::endl;
+	//printData << <1, 1 >> >(d_b, 12, 1);
+	//cudaDeviceSynchronize();
+
+	//std::cout << "LHS: " << std::endl;
+	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
+
+
+	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+	cudaDeviceSynchronize();
+	//std::cout << "velocities: " << std::endl;
+	//printData << < 1, 1 >> > (d_velocities,12,1);
+	//cudaDeviceSynchronize();
+	
 	// update positions. 
-	cublasSaxpy(cuLinearSolver->cublasHandle, n_nodes * 3, &timestep, d_velocities, 1, d_nodes, 1);
+	cublasSaxpy(cuLinearSolver->getcuBlasHandle(), n_nodes * 3, &m_timestep, d_velocities, 1, d_nodes, 1);
+
+	////checkData << <1,1 >> >(d_nodes);
+	cudaMemcpy(hostNode, d_nodes, sizeof(float)*n_nodes * 3, cudaMemcpyDeviceToHost);
+	cudaDeviceSynchronize();
 }

@@ -22,7 +22,7 @@ public:
 		int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval);
 	~CUDAInterface();
 
-	void doBackEuler(float timestep, float dumpingAlpha, float dumpingBelta);
+	void doBackEuler(float *hostNode, bool noElastic);
 	void computeInnerforces();
 	void computeGlobalStiffnessMatrix();
 	// first stroe for global stiffness matrix then for LHS of the linear system.
@@ -46,6 +46,8 @@ private:
 	  float *d_restPoses;
 	  float *d_velocities;
 	  float *d_masses;
+	  float *d_gravities;
+	  float *d_masses_scaled;    // (1+dumping_alpha*timestep)*M
 	  float *d_ANs;
 	  float *d_Dm_inverses;
 	  float *d_mus;
@@ -64,6 +66,10 @@ private:
 	  int m_node_blocksPerGrid;
 	  int m_tet_threadsPerBlock;
 	  int m_tet_blocksPerGrid;
+
+	  float m_dumpingAlpha;
+	  float m_dumpingBelta;
+	  float m_timestep;
 
 
 	  CUDALinearSolvers * cuLinearSolver;

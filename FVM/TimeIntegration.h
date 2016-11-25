@@ -4,6 +4,7 @@
 #include <Eigen/IterativeLinearSolvers>
 #include <Eigen/PardisoSupport>
 #include <iostream>
+#include <cstdio>
 #include "mkl.h"
 
 class TimeIntegration
