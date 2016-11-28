@@ -32,8 +32,15 @@
 #include <cuda_runtime.h>
 #include "svd3_cuda.h"
 
+#define	MIN(a,b)		((a)<(b)?(a):(b))
+#define	MAX(a,b)		((a)>(b)?(a):(b))
+#define SIGN(a)			((a)<0?-1:1)
 
 namespace cuMath{
+
+
+
+
 ///////////////////////////////////////////////////////////////////////////////////////////
 //  R = A - B
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -171,15 +178,6 @@ void Matrix_Transose_3(float *A, float *R)
 // added by Longhua Wu
 //
 /***********************************************************************************/
-__host__ __device__ __forceinline__
-void Matrix_SVD_3(float *A, float *U, float *S, float *V)
-{
-	float T[6]; // parameters holder
-	svd(A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[8],
-		U[0], U[1], U[2], U[3], U[4], U[5], U[6], U[7], U[8],
-		S[0], T[0], T[1], T[2], S[1], T[3], T[4], T[5], S[2],
-		V[0], V[1], V[2], V[3], V[4], V[5], V[6], V[7], V[8]);
-}
 
 __host__ __device__ __forceinline__
 void Matrix_Diagonal_Matrix_T_Product_3(float *U, float *S, float *V, float *F)
@@ -216,5 +214,249 @@ void solveLinearSystem22(float *A, float *b, float *x)
 	x[0] = (b[0] * A[3] - b[1] * A[1]) / (A[0] * A[3] - A[1] * A[2]);
 	x[1] = (b[1] - A[2] * x[0]) / A[3];
 }
+
+__host__ __device__ __forceinline__
+float pythag(float a, float b)
+{
+	float at = fabs(a), bt = fabs(b), ct, result;
+	if (at > bt)       { ct = bt / at; result = at * sqrt(1.0 + ct * ct); }
+	else if (bt > 0.0) { ct = at / bt; result = bt * sqrt(1.0 + ct * ct); }
+	else result = 0.0;
+	return(result);
+}
+
+__host__ __device__ __forceinline__
+void SVD3(float *u, float *w, float *v)
+{
+
+	float	anorm, c, f, g, h, s, scale;
+	float	x, y, z;
+	float	rv1[3];
+	g = scale = anorm = 0.0; //Householder reduction to bidiagonal form.
+
+	for (int i = 0; i<3; i++)
+	{
+		int l = i + 1;
+		rv1[i] = scale*g;
+		g = s = scale = 0.0;
+		if (i<3)
+		{
+			for (int k = i; k<3; k++) scale += fabsf(u[k * 3 + i]);
+			if (scale != 0)
+			{
+				for (int k = i; k<3; k++)
+				{
+					u[k * 3 + i] /= scale;
+					s += u[k * 3 + i] * u[k * 3 + i];
+				}
+				f = u[i * 3 + i];
+				g = -sqrtf(s)*SIGN(f);
+				h = f*g - s;
+				u[i * 3 + i] = f - g;
+				for (int j = l; j<3; j++)
+				{
+					s = 0;
+					for (int k = i; k<3; k++)	s += u[k * 3 + i] * u[k * 3 + j];
+					f = s / h;
+					for (int k = i; k<3; k++)	u[k * 3 + j] += f*u[k * 3 + i];
+				}
+				for (int k = i; k<3; k++)		u[k * 3 + i] *= scale;
+			}
+		}
+		w[i] = scale*g;
+
+		g = s = scale = 0.0;
+		if (i <= 2 && i != 2)
+		{
+			for (int k = l; k<3; k++)	scale += fabsf(u[i * 3 + k]);
+			if (scale != 0)
+			{
+				for (int k = l; k<3; k++)
+				{
+					u[i * 3 + k] /= scale;
+					s += u[i * 3 + k] * u[i * 3 + k];
+				}
+				f = u[i * 3 + l];
+				g = -sqrtf(s)*SIGN(f);
+				h = f*g - s;
+				u[i * 3 + l] = f - g;
+				for (int k = l; k<3; k++) rv1[k] = u[i * 3 + k] / h;
+				for (int j = l; j<3; j++)
+				{
+					s = 0;
+					for (int k = l; k<3; k++)	s += u[j * 3 + k] * u[i * 3 + k];
+					for (int k = l; k<3; k++)	u[j * 3 + k] += s*rv1[k];
+				}
+				for (int k = l; k<3; k++) u[i * 3 + k] *= scale;
+			}
+		}
+		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
+	}
+
+	for (int i = 2, l; i >= 0; i--) //Accumulation of right-hand transformations.
+	{
+		if (i<2)
+		{
+			if (g != 0)
+			{
+				for (int j = l; j<3; j++) //Double division to avoid possible under
+					v[j * 3 + i] = (u[i * 3 + j] / u[i * 3 + l]) / g;
+				for (int j = l; j<3; j++)
+				{
+					s = 0;
+					for (int k = l; k<3; k++)	s += u[i * 3 + k] * v[k * 3 + j];
+					for (int k = l; k<3; k++)	v[k * 3 + j] += s*v[k * 3 + i];
+				}
+			}
+			for (int j = l; j<3; j++)	v[i * 3 + j] = v[j * 3 + i] = 0.0;
+		}
+		v[i * 3 + i] = 1.0;
+		g = rv1[i];
+		l = i;
+	}
+
+	for (int i = 2; i >= 0; i--) //Accumulation of left-hand transformations.
+	{
+		int l = i + 1;
+		g = w[i];
+		for (int j = l; j<3; j++) u[i * 3 + j] = 0;
+		if (g != 0)
+		{
+			g = 1 / g;
+			for (int j = l; j<3; j++)
+			{
+				s = 0;
+				for (int k = l; k<3; k++)	s += u[k * 3 + i] * u[k * 3 + j];
+				f = (s / u[i * 3 + i])*g;
+				for (int k = i; k<3; k++)	u[k * 3 + j] += f*u[k * 3 + i];
+			}
+			for (int j = i; j<3; j++)		u[j * 3 + i] *= g;
+		}
+		else for (int j = i; j<3; j++)		u[j * 3 + i] = 0.0;
+		u[i * 3 + i]++;
+	}
+
+	for (int k = 2; k >= 0; k--)				//Diagonalization of the bidiagonal form: Loop over
+	{
+		for (int its = 0; its<30; its++)	//singular values, and over allowed iterations.
+		{
+			bool flag = true;
+			int  l;
+			int	 nm;
+			for (l = k; l >= 0; l--)			//Test for splitting.
+			{
+				nm = l - 1;
+				if ((float)(fabs(rv1[l]) + anorm) == anorm)
+				{
+					flag = false;
+					break;
+				}
+				if ((float)(fabs(w[nm]) + anorm) == anorm)	break;
+			}
+			if (flag)
+			{
+				c = 0.0; //Cancellation of rv1[l], if l > 0.
+				s = 1.0;
+				for (int i = l; i<k + 1; i++)
+				{
+					f = s*rv1[i];
+					rv1[i] = c*rv1[i];
+					if ((float)(fabs(f) + anorm) == anorm) break;
+					g = w[i];
+					h = pythag(f, g);
+					w[i] = h;
+					h = 1.0 / h;
+					c = g*h;
+					s = -f*h;
+					for (int j = 0; j<3; j++)
+					{
+						y = u[j * 3 + nm];
+						z = u[j * 3 + i];
+						u[j * 3 + nm] = y*c + z*s;
+						u[j * 3 + i] = z*c - y*s;
+					}
+				}
+			}
+			z = w[k];
+			if (l == k)		// Convergence.
+			{
+				if (z<0.0)	// Singular value is made nonnegative.
+				{
+					w[k] = -z;
+					for (int j = 0; j<3; j++) v[j * 3 + k] = -v[j * 3 + k];
+				}
+				break;
+			}
+			if (its == 29) { printf("Error: no convergence in 30 svdcmp iterations"); getchar(); }
+			x = w[l]; //Shift from bottom 2-by-2 minor.
+			nm = k - 1;
+			y = w[nm];
+			g = rv1[nm];
+			h = rv1[k];
+			f = ((y - z)*(y + z) + (g - h)*(g + h)) / (2.0*h*y);
+			g = pythag(f, (float)1.0);
+			f = ((x - z)*(x + z) + h*((y / (f + fabs(g)*SIGN(f))) - h)) / x;
+			c = s = 1.0; //Next QR transformation:
+
+			for (int j = l; j <= nm; j++)
+			{
+				int i = j + 1;
+				g = rv1[i];
+				y = w[i];
+				h = s*g;
+				g = c*g;
+				z = pythag(f, h);
+				rv1[j] = z;
+				c = f / z;
+				s = h / z;
+				f = x*c + g*s;
+				g = g*c - x*s;
+				h = y*s;
+				y *= c;
+				for (int jj = 0; jj<3; jj++)
+				{
+					x = v[jj * 3 + j];
+					z = v[jj * 3 + i];
+					v[jj * 3 + j] = x*c + z*s;
+					v[jj * 3 + i] = z*c - x*s;
+				}
+				z = pythag(f, h);
+				w[j] = z; //Rotation can be arbitrary if z D 0.
+				if (z)
+				{
+					z = 1.0 / z;
+					c = f*z;
+					s = h*z;
+				}
+				f = c*g + s*y;
+				x = c*y - s*g;
+				for (int jj = 0; jj<3; jj++)
+				{
+					y = u[jj * 3 + j];
+					z = u[jj * 3 + i];
+					u[jj * 3 + j] = y*c + z*s;
+					u[jj * 3 + i] = z*c - y*s;
+				}
+			}
+			rv1[l] = 0.0;
+			rv1[k] = f;
+			w[k] = x;
+		}
+	}
+}
+
+__host__ __device__ __forceinline__
+void Matrix_SVD_3(float *A, float *U, float *S, float *V)
+{
+	float T[6]; // parameters holder
+	svd(A[0], A[1], A[2], A[3], A[4], A[5], A[6], A[7], A[8],
+		U[0], U[1], U[2], U[3], U[4], U[5], U[6], U[7], U[8],
+		S[0], T[0], T[1], T[2], S[1], T[3], T[4], T[5], S[2],
+		V[0], V[1], V[2], V[3], V[4], V[5], V[6], V[7], V[8]);
+
+	//memcpy(U, A, sizeof(float) * 9);
+	//cuMath::SVD3(U, S, V);
+}
+
 
 }

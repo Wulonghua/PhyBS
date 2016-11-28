@@ -9,7 +9,7 @@ float atomicAdd(float *address, float val);
 __host__ __device__ 
 void computeEnergy2FhatGradient(float mu, float lambda, float *Fhats, float *gradient)
 {
-	float tmp = lambda *  (log(Fhats[0]) + log(Fhats[1]) + log(Fhats[2])) - mu;
+	float tmp = lambda *  (std::log(Fhats[0]) + std::log(Fhats[1]) + std::log(Fhats[2])) - mu;
 
 	for (int i = 0; i < 3; ++i)
 		gradient[i] = mu*Fhats[i] + tmp / Fhats[i];
@@ -225,6 +225,7 @@ __global__ void computeGlobalK(float *Us, float *Fhats, float *Vs, int *tets, in
 	if (i >= num_tets)	return;
 
 	int Ki, Kj,KIdx;
+	int tetInitID = i * 48;
 	float dfdx[144];
 	compute_dfdx(Us + 9 * i, Fhats + 3 * i, Vs + 9 * i, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
 
@@ -248,7 +249,7 @@ __global__ void computeGlobalK(float *Us, float *Fhats, float *Vs, int *tets, in
 				for (int nj = 0; nj < 3; ++nj)
 				{
 					Kj = ni * 3 + nj;
-					atomicAdd(gK + kIDinCSRval[KIdx] + nj, -dfdx[Ki * 12 + Kj]);
+					atomicAdd(gK + kIDinCSRval[tetInitID+KIdx] + nj, -dfdx[Ki * 12 + Kj]);
 				}
 			}
 		}
@@ -368,13 +369,14 @@ __global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
 
 	//svd
 	cuMath::Matrix_SVD_3(F, U, Fhat, V);
+
 	memcpy(Us + 9 * i, U, sizeof(float) * 9);
 	memcpy(Fhats + 3*i, Fhat, sizeof(float)*3);
 	memcpy(Vs+ 9*i, V,sizeof(float)*9);
 
 	computeEnergy2FhatGradient(mus[i], lambdas[i], Fhat, Phat);
 
-	cuMath::Matrix_Diagonal_Matrix_T_Product_3(U, Fhats, V, P);
+	cuMath::Matrix_Diagonal_Matrix_T_Product_3(U, Phat, V, P);
 
 	cuMath::Matrix_Product_3(P, ANs + 9 * i, forces);
 
@@ -535,7 +537,7 @@ __global__ void printData(int *devicePtr, int m, int n)
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
-	n_nodes(num_nodes), n_tets(num_tets), m_dumpingAlpha(0.03), m_dumpingBelta(0.03), m_timestep(0.03)
+	n_nodes(num_nodes), n_tets(num_tets), m_dumpingAlpha(0.02), m_dumpingBelta(0.02), m_timestep(0.03)
 {
 	m_node_threadsPerBlock = 64;
 	m_node_blocksPerGrid = (num_nodes + m_node_threadsPerBlock - 1) / m_node_threadsPerBlock;
@@ -634,56 +636,69 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_masses_scaled);    
 }
 
+void CUDAInterface::updateNodePositions(const float *hostnodes)
+{
+	cudaMemcpy(d_nodes, hostnodes, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
+}
+
 void CUDAInterface::computeInnerforces()
 {
+	cudaMemset(d_b, 0, sizeof(float)*n_nodes * 3);
 	computeElasticForces << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_Us, d_Fhats, d_Vs, d_b);
 	cudaDeviceSynchronize();
 
 	addFixContraintsAndGravity << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_nodes, d_restPoses, d_gravities, d_b, d_constraintsMask, n_nodes);
 	cudaDeviceSynchronize();
 	//std::cout << "dUs:" << std::endl;
-	//printData<< <1, 1 >> >(d_Us, 3, 3);
+	//printData<< <1, 1 >> >(d_Us, 6, 3);
 	//cudaDeviceSynchronize();
 
 	//std::cout << "dVs:" << std::endl;
-	//printData << <1, 1 >> >(d_Vs, 3, 3);
+	//printData << <1, 1 >> >(d_Vs, 6, 3);
 	//cudaDeviceSynchronize();
 
 	//std::cout << "Fhats: " << std::endl;
-	//printData << <1, 1 >> >(d_Fhats, 3, 1);
+	//printData << <1, 1 >> >(d_Fhats, 6, 1);
+	//cudaDeviceSynchronize();
+	//printData << <1, 1 >> >(d_b, n_nodes, 3);
 	//cudaDeviceSynchronize();
 
-	//std::cout << "forces: " << std::endl;
-	//printData << <1, 1 >> >(d_b, 4, 3);
+	//printData << < 1, 1 >> >(d_gravities, n_nodes, 1);
 	//cudaDeviceSynchronize();
 }
 
 void CUDAInterface::computeGlobalStiffnessMatrix()
 {
-	
+	cudaMemset(csrMat.d_Valptr, 0, sizeof(float)*csrMat.nnz);
 	computeGlobalK << <m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_Us, d_Fhats, d_Vs, d_tets, n_tets, d_ANs, d_Dm_inverses, d_mus, d_lambdas, d_kIDinCSRval, csrMat.d_Valptr);
 	cudaDeviceSynchronize();
 	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
 	//cudaDeviceSynchronize();
 }
 
-void CUDAInterface::doBackEuler(float *hostNode, bool noElastic)
+void CUDAInterface::doBackEuler(float *hostNode)
 {
-	if (noElastic)
-		cudaMemset(d_b, 0, sizeof(float) * 12);
 
-	std::cout << "velocities: " << std::endl;
-	printData << <1, 1 >> >(d_velocities, 12, 1);
-	cudaDeviceSynchronize();
+	//std::cout << "velocities: " << std::endl;
+	//printData << <1, 1 >> >(d_velocities, 12, 1);
+	//cudaDeviceSynchronize();
 
 	//std::cout << "masses: " << std::endl;
-	//printData << <1, 1 >> >(d_masses, 1, 4);
+	//printData << <1, 1 >> >(d_masses, 1, 5);
+	//cudaDeviceSynchronize();
+	//std::cout << "nnz:" << std::endl;
+	//std::cout << csrMat.nnz << std::endl;
+
+	//std::cout << "idx: " << std::endl;
+	//printData << <1, 1 >> >(d_kIDinCSRval, 1, csrMat.nnz);
 	//cudaDeviceSynchronize();
 
-	//cudaMemcpy(csrMat.d_Valptr, tmp, sizeof(float) * 144, cudaMemcpyHostToDevice);
+	//std::cout << "K: " << std::endl;
+	//printData << <1, 1 >> >(csrMat.d_Valptr, n_nodes*3, n_nodes*3);
 	//cudaDeviceSynchronize();
-	//std::cout << "LHS: " << std::endl;
-	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+
+	//std::cout << "forces: " << std::endl;
+	//printData << <1, 1 >> >(d_b, n_nodes, 3);
 	//cudaDeviceSynchronize();
 
 	setRHSofLinearSystem << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_velocities, m_timestep, n_nodes, d_b);
@@ -696,21 +711,12 @@ void CUDAInterface::doBackEuler(float *hostNode, bool noElastic)
 	setLHSofLinearSystem << <m_node_blocksPerGrid, m_node_threadsPerBlock * 3 >> >(d_masses_scaled, csrMat.m, csrMat.d_Valptr, csrMat.d_diagonalIdx);
 	cudaDeviceSynchronize();
 
-	//std::cout << "mass: " << std::endl;
-	//printData << <1, 1 >> >(d_masses, 4, 1);
-	//cudaDeviceSynchronize();
-
-	//std::cout << "diagonalIdx: " << std::endl;
-	//printData << <1, 1 >> >(csrMat.d_diagonalIdx, 1, 12);
-	//cudaDeviceSynchronize();
-	//
-
 	//std::cout << "RHS: " << std::endl;
-	//printData << <1, 1 >> >(d_b, 12, 1);
+	//printData << <1, 1 >> >(d_b, n_nodes*3, 1);
 	//cudaDeviceSynchronize();
 
 	//std::cout << "LHS: " << std::endl;
-	//printData << <1, 1 >> >(csrMat.d_Valptr, 12, 12);
+	//printData << <1, 1 >> >(csrMat.d_Valptr, n_nodes*3, n_nodes*3);
 	//cudaDeviceSynchronize();
 
 
@@ -718,13 +724,17 @@ void CUDAInterface::doBackEuler(float *hostNode, bool noElastic)
 	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
 	cudaDeviceSynchronize();
 	//std::cout << "velocities: " << std::endl;
-	//printData << < 1, 1 >> > (d_velocities,12,1);
+	//printData << < 1, 1 >> > (d_velocities,n_nodes*3,1);
 	//cudaDeviceSynchronize();
 	
 	// update positions. 
 	cublasSaxpy(cuLinearSolver->getcuBlasHandle(), n_nodes * 3, &m_timestep, d_velocities, 1, d_nodes, 1);
+	cudaDeviceSynchronize();
 
-	////checkData << <1,1 >> >(d_nodes);
+	//std::cout << "p: " << std::endl;
+	//printData << < 1, 1 >> > (d_nodes, n_nodes * 3, 1);
+	//cudaDeviceSynchronize();
+
 	cudaMemcpy(hostNode, d_nodes, sizeof(float)*n_nodes * 3, cudaMemcpyDeviceToHost);
 	cudaDeviceSynchronize();
 }

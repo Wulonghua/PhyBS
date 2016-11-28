@@ -73,6 +73,7 @@
    <addaction name="actionStop"/>
    <addaction name="separator"/>
    <addaction name="actionTest"/>
+   <addaction name="actionExportNodes"/>
    <addaction name="actionImportNodes"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
@@ -157,7 +158,19 @@
     <string>ImportNodes</string>
    </property>
    <property name="toolTip">
-    <string>Import Nodes Positions</string>
+    <string>Import Nodes' Positions</string>
+   </property>
+  </action>
+  <action name="actionExportNodes">
+   <property name="icon">
+    <iconset resource="fvm.qrc">
+     <normaloff>:/icon/icon/export.png</normaloff>:/icon/icon/export.png</iconset>
+   </property>
+   <property name="text">
+    <string>ExportNodes</string>
+   </property>
+   <property name="toolTip">
+    <string>Export Nodes' Positions</string>
    </property>
   </action>
  </widget>

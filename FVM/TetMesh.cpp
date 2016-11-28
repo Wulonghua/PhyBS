@@ -35,18 +35,16 @@ void TetMesh::initNodesFromFile(QString filename)
 		{
 			fin >> prefix >> m_rest_positions(0, i) >> m_rest_positions(1, i) >> m_rest_positions(2, i);
 
-			
-
 			//if (m_rest_positions(0, i) == -2.5)
 			//	m_constraintIDs.push_back(i);
 
 			//if (m_rest_positions(1, i) > 0.16)
 			//	m_constraintIDs.push_back(i);
 
-			//if (m_rest_positions(1, i) < -1.8)
-			//	m_constraintIDs.push_back(i);
+			if (m_rest_positions(1, i) < -1.8)
+				m_constraintIDs.push_back(i);
 		}
-		m_constraintIDs.push_back(0);
+		//m_constraintIDs.push_back(0);
 		m_nodes = m_rest_positions;
 
 
@@ -151,9 +149,13 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\torus\\torus.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\torus\\torus.1.face"));
 
-	initNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
-	initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
-	initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\tet\\tet.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\tet\\tet.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\tet\\tet.1.face"));
+
+	//initNodesFromFile(QStringLiteral("..\\model\\tet2\\tet.2.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\tet2\\tet.2.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\tet2\\tet.2.face"));
 
 	//initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
 	//initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
@@ -163,13 +165,9 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.face"));
 
-	//initNodesFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.node"));
-	//initTetsFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.ele"));
-	//initFacesFromFile(QStringLiteral("..\\model\\bunny\\bunny.1.face"));
-
-	//initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
-	//initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
-	//initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
+	initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXf::Zero(3, n_tets * 3);
@@ -193,8 +191,6 @@ void TetMesh::initModel()
 		computeANs(i);
 	}	
 	m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
-	
-	//writeMatrix(QStringLiteral("ANs.csv"), m_ANs.transpose());
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 
@@ -522,7 +518,7 @@ float TetMesh::fixPrecision(float m)
 		return itg;
 }
 
-void TetMesh::writeNodes(QString nodefile)
+void TetMesh::writeNodesToFile(QString nodefile)
 {
 	QFile file(nodefile);
 	if (file.open(QIODevice::ReadWrite)) {

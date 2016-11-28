@@ -62,7 +62,7 @@ public:
 
 	// for test
 	void writeMatrix(QString file, Eigen::MatrixXf mat);
-	void writeNodes(QString file);
+	void writeNodesToFile(QString file);
 
 	float fixPrecision(float m);
 

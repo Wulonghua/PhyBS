@@ -27,7 +27,7 @@ TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXf m) : m_t(2e-3)
 }
 
 TimeIntegration::TimeIntegration(int num_nodes, Eigen::VectorXf m, std::vector<int> constraints, Eigen::MatrixXf rest_pos) :
-m_t(3e-2), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.03), m_dumpingBelta(0.03)
+m_t(0.03), m_constraints(constraints), m_rest(rest_pos), m_dumpingAlpha(0.02), m_dumpingBelta(0.02)
 {
 	m_positions = Eigen::MatrixXf::Zero(3, num_nodes);
 	m_velocities = Eigen::MatrixXf::Zero(3, num_nodes);
@@ -158,7 +158,14 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 			force.col(m_constraints[i]) += 1e8 * (restPos.col(m_constraints[i]) - pos.col(m_constraints[i]));
 	}
 
+	//std::cout << "forces: " << std::endl;
+	//std::cout << force.transpose() << std::endl;
+
 	int n = pos.cols();
+
+	//std::cout << "K:" << std::endl;
+	//std::cout << K << std::endl;
+
 	Eigen::SparseMatrix<float> A = (m_dumpingBelta + m_t)*m_t*K;
 	for (int i = 0; i < 3 * n; ++i)
 	{
@@ -172,17 +179,29 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 	Eigen::Map<Eigen::VectorXf> v(vel.data(), n_nodes * 3);
 	Eigen::Map<Eigen::VectorXf> f(force.data(), n_nodes * 3);
 
+	//std::cout << "forces" << std::endl;
+	//std::cout << f << std::endl;
+
 	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
 	
 	//for (int i = 0; i < 3; ++i)
 	//	printf("%.10f %.10f\n", v[i], b[i]);
+
+	//std::cout << "RHS:" << std::endl;
+	//std::cout << b << std::endl;
 	
 	mkl_set_dynamic(0);
 	mkl_set_num_threads(4);
 	m_pardiso_solver.compute(A);
 	v = m_pardiso_solver.solve(b);
 
+	//std::cout << "v:" << std::endl;
+	//std::cout << v << std::endl;
+
 	p += m_t * v;
+
+	//std::cout << "p:" << std::endl;
+	//std::cout << p << std::endl;
 	
 	//std::cout << mkl_get_max_threads() << std::endl;
 }

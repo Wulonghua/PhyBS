@@ -28,6 +28,7 @@ public slots:
 	void DoPause();
 	void DoLoadConfig();
 	void DoImportNodes();   // import nodes' positions.
+	void DoExportNodes();
 	void DoStop();
 	void DoTest();
 

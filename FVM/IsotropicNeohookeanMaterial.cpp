@@ -51,6 +51,8 @@ void IsotropicNeohookeanMaterial::computeEnergy2FhatGradient(int tetID, const fl
 	float mu = m_mus[tetID];
 	float lambda = m_lambdas[tetID];
 	float tmp = lambda *  (std::log(Fhats[0]) + std::log(Fhats[1]) + std::log(Fhats[2])) - mu;
+	//std::cout << "mu: " << mu << std::endl;
+	//std::cout << "lambda: " << lambda << std::endl;
 
 	for (int i = 0; i < 3; ++i)
 		gradient[i] = mu*Fhats[i] + tmp / Fhats[i];

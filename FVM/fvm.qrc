@@ -8,5 +8,6 @@
     <file>../icon/stop.png</file>
 	<file>../icon/test.png</file>
 	<file>../icon/import.png</file>
+	<file>../icon/export.png</file>
   </qresource>
 </RCC>

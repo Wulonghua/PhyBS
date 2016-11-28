@@ -22,9 +22,10 @@ public:
 		int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval);
 	~CUDAInterface();
 
-	void doBackEuler(float *hostNode, bool noElastic);
+	void doBackEuler(float *hostNode);
 	void computeInnerforces();
 	void computeGlobalStiffnessMatrix();
+	void updateNodePositions(const float *hostNode);
 	// first stroe for global stiffness matrix then for LHS of the linear system.
 	struct CSRmatrix
 	{
@@ -73,7 +74,4 @@ private:
 
 
 	  CUDALinearSolvers * cuLinearSolver;
-
-
-
 };

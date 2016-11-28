@@ -52,6 +52,7 @@ void FVM::initSignalSlotConnections()
 {
 	connect(ui.actionLoadConfig, SIGNAL(triggered()), this, SLOT(DoLoadConfig()));
 	connect(ui.actionImportNodes, SIGNAL(triggered()), this, SLOT(DoImportNodes()));
+	connect(ui.actionExportNodes, SIGNAL(triggered()), this, SLOT(DoExportNodes()));
 	connect(ui.actionStep, SIGNAL(triggered()), this, SLOT(DoOneStep()));
 	connect(ui.actionRun, SIGNAL(triggered()), this, SLOT(DoRun()));
 	connect(ui.actionPause, SIGNAL(triggered()), this, SLOT(DoPause()));
@@ -80,6 +81,7 @@ void FVM::DoImportNodes()
 			return;
 		}
 		m_tetMesh->updateNodesFromFile(nodeFile);
+		m_cudaInterface->updateNodePositions(m_tetMesh->getNodes().data());
 		ui.glWidget->update();
 		std::cout << "Nodes' positions updated.";
 	}
@@ -87,7 +89,22 @@ void FVM::DoImportNodes()
 	{
 		std::cout << "Failed to update nodes' positions." << std::endl;
 	}
+}
 
+void FVM::DoExportNodes()
+{
+	QString nodeFile = QFileDialog::getSaveFileName(this,
+		tr("Write Nodes' Positions"), "",
+		tr("Node File (*.node)"));
+	if (!nodeFile.isEmpty())
+	{
+		m_tetMesh->writeNodesToFile(nodeFile);
+		std::cout << "Nodes' positions writen.";
+	}
+	else
+	{
+		std::cout << "Failed to write nodes' positions." << std::endl;
+	}
 }
 
 void FVM::DoOneStep()
@@ -113,8 +130,11 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
 	////Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+	////std::cout << "forces: " << std::endl;
+	////std::cout << forces.transpose();
+
 	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
 	//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
@@ -125,10 +145,7 @@ void FVM::DoOneStep()
 
 	m_cudaInterface->computeGlobalStiffnessMatrix();
 
-	if (++m_frameID ==1)
-		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), true);
-	else
-		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), false);
+	m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
 
 
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
@@ -196,56 +213,29 @@ void FVM::DoTest()
 	std::cout << "time to solve the system: " << elapse << std::endl;
 	ui.glWidget->update();
 	**************************************************************************************/
-	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
-	//int num_tets, const int *tets, const float youngs, const float nu, const float density,
-	//int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval
-	//std::vector<int> mask;
-	//mask.resize(m_tetMesh->getNodesNum());
-	//std::fill(mask.begin(), mask.end(), 0);
-	//auto c = m_tetMesh->getConstraintIDs();
-	//for (int i = 0; i < c.size(); i++)
-	//{
-	//	mask[c[i]] = 1;
-	//}
-	//auto K = m_IsoMaterial->getGlobalK();
-	//m_cudaInterface = std::make_shared<CUDAInterface>(
-	//m_tetMesh->getNodesNum(), m_tetMesh->getNodes().data(), m_tetMesh->getRestPosition().data(), mask.data(),
-	//m_tetMesh->getTetsNum(), m_tetMesh->getTets().data(), m_tetMesh->getE(), m_tetMesh->getNu(),1000,
-	//K.nonZeros(), K.rows(),K.valuePtr(),K.outerIndexPtr(),K.innerIndexPtr(),m_IsoMaterial->getDiagonalIdx().data(),m_IsoMaterial->getKIDinCSRval().data());
-	//std::cout << "cuda initialized" << std::endl;
 
-	//float NodePtr[12] = {0.0};
-	//for (int i = 0; i < 10; i++)
-	//{
+	/*******************************test for gpu**************************************************/
+		int elapse;
 
-
-	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
-
-	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
-
-	//std::cout << "K: " << std::endl;
-	//std::cout << sK << std::endl;
-
-	//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-	//	m_tetMesh->getVelocities(),
-	//	forces, sK);
-
-
-
+		ui.glWidget->restartTime();
 
 		m_cudaInterface->computeInnerforces();
 
+		elapse = ui.glWidget->restartTime();
+		std::cout << "time to compute force: " << elapse << std::endl;
+
 		m_cudaInterface->computeGlobalStiffnessMatrix();
 
-		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data(), false);
+		elapse = ui.glWidget->restartTime();
+		std::cout << "time to compute K: " << elapse << std::endl;
+
+		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
+
+		elapse = ui.glWidget->restartTime();
+		std::cout << "time to solve the system: " << elapse << std::endl;
 
 		ui.glWidget->update();
 
-		//std::cout << m_tetMesh->getNodes();
-	//}
-	//for (int i = 0; i < 12; ++i)
-	//	std::cout << NodePtr[i] << " ";
-	//std::cout << std::endl;
-
+		/***************************************************************************************/
 
 }

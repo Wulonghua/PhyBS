@@ -384,6 +384,20 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2()
 
 		forces = P * m_tetModel->getAN(i);
 
+		//std::cout << i << ": " << std::endl;
+		//std::cout << "U:" << std::endl;
+		//std::cout << U << std::endl;
+		//std::cout << "Fhat: " << std::endl;
+		//std::cout << Fhat << std::endl;
+		//std::cout << "V:" << std::endl;
+		//std::cout << V << std::endl;
+		//std::cout << "Phat" << std::endl;
+		//std::cout << Phat << std::endl;
+		//std::cout << "P:" << std::endl;
+		//std::cout << P << std::endl;
+		//std::cout << "force" << std::endl;
+		//std::cout << forces << std::endl;
+
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
@@ -489,7 +503,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 {
 	int n = m_tetModel->getNodesNum();
 	int m = m_tetModel->getTetsNum();
-	int gKi, gKj,Ki;
+	int gKi, gKj,Ki, tetInitID;
 
 	m_globalK.resize(3*n,3*n);
 	//if (n >= 10)
@@ -498,7 +512,6 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 
 	for (int i = 0; i < m; ++i)
 	{
-
 		for (int fi = 0; fi < 4; ++fi)
 		{
 			for (int fj = 0; fj < 3; ++fj)
@@ -533,7 +546,7 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	m_kIDinCSRval.resize(m*48);
 	for (int i = 0; i < m; ++i)
 	{
-
+		tetInitID = 48 * i;
 		for (int fi = 0; fi < 4; ++fi)
 		{
 			for (int fj = 0; fj < 3; ++fj)
@@ -543,11 +556,13 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 				for (int ni = 0; ni < 4; ++ni)
 				{
 					gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3;
-					m_kIDinCSRval[Ki*4 + ni] = getCSRvalueIndex(gKi, gKj, pRow, pCol);
+					m_kIDinCSRval[tetInitID+Ki*4 + ni] = getCSRvalueIndex(gKi, gKj, pRow, pCol);
 				}
 			}
 		}
 	}
+	//for (int i = 0; i < 96; ++i)
+	//	std::cout << m_kIDinCSRval[i] << " ";
 }
 
 Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrix()
