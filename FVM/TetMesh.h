@@ -21,6 +21,7 @@ public:
 	void initTetsFromFile(QString filename);
 	void initFacesFromFile(QString filename);
 	void updateNodesFromFile(QString filename);
+	void reset();
 
 	void setTetMaterial(float e, float nu, float den);
 

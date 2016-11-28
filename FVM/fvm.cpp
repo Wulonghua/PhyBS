@@ -171,7 +171,10 @@ void FVM::DoPause()
 
 void FVM::DoStop()
 {
-	
+	m_idleTimer->stop();
+	m_tetMesh->reset();
+	m_cudaInterface->reset();
+	ui.glWidget->update();
 }
 
 void FVM::DoTest()

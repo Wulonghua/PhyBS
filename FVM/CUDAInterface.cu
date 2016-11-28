@@ -641,6 +641,12 @@ void CUDAInterface::updateNodePositions(const float *hostnodes)
 	cudaMemcpy(d_nodes, hostnodes, sizeof(float) * 3 * n_nodes, cudaMemcpyHostToDevice);
 }
 
+void CUDAInterface::reset()
+{
+	cudaMemcpy(d_nodes, d_restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyDeviceToDevice);
+	cudaMemset(d_velocities, 0, sizeof(float) * 3 * n_nodes);
+}
+
 void CUDAInterface::computeInnerforces()
 {
 	cudaMemset(d_b, 0, sizeof(float)*n_nodes * 3);

@@ -26,6 +26,7 @@ public:
 	void computeInnerforces();
 	void computeGlobalStiffnessMatrix();
 	void updateNodePositions(const float *hostNode);
+	void reset();
 	// first stroe for global stiffness matrix then for LHS of the linear system.
 	struct CSRmatrix
 	{
