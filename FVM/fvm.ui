@@ -75,6 +75,7 @@
    <addaction name="actionTest"/>
    <addaction name="actionExportNodes"/>
    <addaction name="actionImportNodes"/>
+   <addaction name="separator"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="actionLoadConfig">

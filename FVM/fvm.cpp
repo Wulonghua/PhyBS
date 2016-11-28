@@ -1,9 +1,15 @@
 #include "fvm.h"
 
 FVM::FVM(QWidget *parent)
-	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(8)
+	: QMainWindow(parent), m_iter(0), m_frameID(0), m_numThreads(8), m_typeComputing(0)
 {
 	ui.setupUi(this);
+	// ui setting
+	m_comboboxType = new QComboBox();
+	m_comboboxType->addItem(QStringLiteral("CPU"));
+	m_comboboxType->addItem(QStringLiteral("GPU"));
+	ui.mainToolBar->addWidget(m_comboboxType);
+
 	m_tetMesh = std::make_shared<TetMesh>();
 	//m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),m_tetMesh->getMasses());
 	m_integrator = std::make_shared<TimeIntegration>(m_tetMesh->getNodesNum(),
@@ -59,6 +65,7 @@ void FVM::initSignalSlotConnections()
 	connect(ui.actionStop, SIGNAL(triggered()), this, SLOT(DoStop()));
 	connect(ui.actionTest, SIGNAL(triggered()), this, SLOT(DoTest()));
 	connect(m_idleTimer,SIGNAL(timeout()),this, SLOT(DoOneStep()));
+	connect(m_comboboxType, SIGNAL(currentIndexChanged(int)), this, SLOT(SetTypeComputing(int)));
 }
 
 void FVM::DoLoadConfig()
@@ -130,23 +137,27 @@ void FVM::DoOneStep()
 	/**********************************************************************************************/
 
 	/******************************Back Euler integration**********************************/
-	//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
-	////Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
-	////std::cout << "forces: " << std::endl;
-	////std::cout << forces.transpose();
+	if (m_typeComputing == 0)
+	{
+		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
+		//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+		//std::cout << "forces: " << std::endl;
+		//std::cout << forces.transpose();
 
-	//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
-	//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-	//	m_tetMesh->getVelocities(),
-	//	forces, sK);
+		m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+			m_tetMesh->getVelocities(),
+			forces, sK);
+	}
+	else
+	{
+		m_cudaInterface->computeInnerforces();
 
-	m_cudaInterface->computeInnerforces();
+		m_cudaInterface->computeGlobalStiffnessMatrix();
 
-	m_cudaInterface->computeGlobalStiffnessMatrix();
-
-	m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
-
+		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
+	}
 
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
 	//m_tetMesh->writeNodes(node_file);
@@ -241,4 +252,9 @@ void FVM::DoTest()
 
 		/***************************************************************************************/
 
+}
+
+void FVM::SetTypeComputing(int type)
+{
+	m_typeComputing = type;
 }

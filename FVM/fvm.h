@@ -5,6 +5,7 @@
 #include <qtimer.h>
 #include <qlabel.h>
 #include <qfiledialog.h>
+#include <qcombobox.h>
 #include <memory>
 
 #include "ui_fvm.h"
@@ -31,6 +32,7 @@ public slots:
 	void DoExportNodes();
 	void DoStop();
 	void DoTest();
+	void SetTypeComputing(int type);
 
 private:
 	void initSignalSlotConnections();
@@ -48,6 +50,12 @@ private:
 	int m_frameID;
 
 	int m_numThreads;
+
+	int m_typeComputing;  // 0: using CPU; 1: using GPU;
+
+	// UI
+	QComboBox *m_comboboxType;
+
 };
 
 #endif // FVM_H
