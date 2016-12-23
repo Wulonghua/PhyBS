@@ -141,8 +141,6 @@ void FVM::DoOneStep()
 	{
 		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
 		//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
-		//std::cout << "forces: " << std::endl;
-		//std::cout << forces.transpose();
 
 		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
