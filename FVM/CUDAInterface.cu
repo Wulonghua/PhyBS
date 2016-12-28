@@ -665,12 +665,25 @@ void CUDAInterface::reset()
 
 void CUDAInterface::splitCSRMatJacobi(CSRmatrix &A, float *B_1)
 {
+	//std::cout << "A:" << std::endl;
+	//printData<< <1, 1 >> >(A.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
+	
 	splitMatJacobi<<<m_node_blocksPerGrid, m_node_threadsPerBlock*3>>>(A.d_Valptr, A.m,A.d_diagonalIdx,B_1);
 	cudaDeviceSynchronize();
+
+	//std::cout << "B^-1:" << std::endl;
+	//printData << <1, 1 >> >(B_1, 1, 12);
+	//cudaDeviceSynchronize();
+
 	int threadsPerBlock = 64;
 	int blocksPerGrid = (csrMat.nnz + threadsPerBlock - 1) / threadsPerBlock;
 	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(A.d_Valptr, A.d_Valptr, -1.0, A.nnz);
 	cudaDeviceSynchronize();
+
+	//std::cout << "A:" << std::endl;
+	//printData << <1, 1 >> >(A.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
 }
 
 void CUDAInterface::computeInnerforces()
@@ -751,6 +764,10 @@ void CUDAInterface::doBackEuler(float *hostNode)
 	//printData << <1, 1 >> >(csrMat.d_Valptr, n_nodes*3, n_nodes*3);
 	//cudaDeviceSynchronize();
 
+
+	// split the matrix to diagonal and off-diagonal parts, csrMat only remains the negative of off-diagonal parts,
+	// B_1 stores the inverse of the diagonal parts.
+	splitCSRMatJacobi(csrMat, d_B_1);
 
 	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
 	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
