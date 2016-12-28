@@ -19,17 +19,25 @@
 class CUDALinearSolvers
 {
 public:
-		CUDALinearSolvers(int rowNum, int nnz);
-		~CUDALinearSolvers();
-		
-		void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
-		void directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x);
-		cublasHandle_t & getcuBlasHandle() { return cublasHandle; }
+	CUDALinearSolvers(int rowNum, int nnz);
+	~CUDALinearSolvers();
+
+	void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
+	void directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x);
+	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float *d_y);
+	cublasHandle_t & getcuBlasHandle() { return cublasHandle; }
 
 
 
 
 private:
+	void swap(float **a, float **b)
+	{
+		float *t = *a;
+		a = b;
+		*b = t;
+	}
+
 	int N;        // number of A's rows
 	int nz;       // number of A's non-zero entries.
 
@@ -37,19 +45,23 @@ private:
 	cublasHandle_t cublasHandle;
 	cublasStatus_t cublasStatus;
 
-    /* Create CUSPARSE context */
-    cusparseHandle_t cusparseHandle;
-    cusparseStatus_t cusparseStatus;
+	/* Create CUSPARSE context */
+	cusparseHandle_t cusparseHandle;
+	cusparseStatus_t cusparseStatus;
 
 	cusolverSpHandle_t cusolverHandle;
 	cusolverStatus_t cusolverStatus;
 
-    /* Description of the A matrix*/
-    cusparseMatDescr_t descr;
+	/* Description of the A matrix*/
+	cusparseMatDescr_t descr;
 
-	// followings are temped device memory for later conjugate gradient solver.
+	// followings are temped device memory for later conjugate gradient
 	float *d_p;
 	float *d_Ax;
+
+	// followings are temped device memory for later Chebyshev Jacobi solver.
+	float *d_y1;
+	float *d_y2;
 
 };
 

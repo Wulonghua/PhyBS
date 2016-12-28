@@ -1,35 +1,3 @@
-/*
- * Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
- *
- * Please refer to the NVIDIA end user license agreement (EULA) associated
- * with this source code for terms and conditions that govern your use of
- * this software. Any use, reproduction, disclosure, or distribution of
- * this software and related documentation outside the terms of the EULA
- * is strictly prohibited.
- *
- */
-/*
- *  Functions are modified from the NVIDIA official example code.
- *  Modified by Longhua Wu
- */
-/*
- * This sample implements a preconditioned conjugate gradient solver on
- * the GPU using CUBLAS and CUSPARSE.  Relative to the conjugateGradient
- * SDK example, this demonstrates the use of cusparseScsrilu0() for
- * computing the incompute-LU preconditioner and cusparseScsrsv_solve()
- * for solving triangular systems.  Specifically, the preconditioned
- * conjugate gradient method with an incomplete LU preconditioner is
- * used to solve the Laplacian operator in 2D on a uniform mesh.
- *
- * Note that the code in this example and the specific matrices used here
- * were chosen to demonstrate the use of the CUSPARSE library as simply
- * and as clearly as possible.  This is not optimized code and the input
- * matrices have been chosen for simplicity rather than performance.
- * These should not be used either as a performance guide or for
- * benchmarking purposes.
- *
- */
-
 #pragma once
 
 #include "CUDALinearSolvers.h"
@@ -65,7 +33,8 @@ N(rowNum), nz(nnz)
 
 	checkCudaErrors(cudaMalloc((void **)&d_p, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_Ax, N*sizeof(float)));
-	
+	checkCudaErrors(cudaMalloc((void **)&d_y1, N*sizeof(float)));
+	checkCudaErrors(cudaMalloc((void **)&d_y2, N*sizeof(float)));
 }
 
 CUDALinearSolvers::~CUDALinearSolvers()
@@ -75,6 +44,8 @@ CUDALinearSolvers::~CUDALinearSolvers()
 	cusolverSpDestroy(cusolverHandle);
 	cudaFree(d_p);
 	cudaFree(d_Ax);
+	cudaFree(d_y1);
+	cudaFree(d_y2);
 }
 
 void CUDALinearSolvers::directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x)
@@ -85,6 +56,38 @@ void CUDALinearSolvers::directCholcuSolver(float *d_val, int *d_row, int *d_col,
 	checkCudaErrors(cusolverStatus);
 }
 
+
+/*
+* Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
+*
+* Please refer to the NVIDIA end user license agreement (EULA) associated
+* with this source code for terms and conditions that govern your use of
+* this software. Any use, reproduction, disclosure, or distribution of
+* this software and related documentation outside the terms of the EULA
+* is strictly prohibited.
+*
+*/
+/*
+*  Functions are modified from the NVIDIA official example code.
+*  Modified by Longhua Wu
+*/
+/*
+* This sample implements a preconditioned conjugate gradient solver on
+* the GPU using CUBLAS and CUSPARSE.  Relative to the conjugateGradient
+* SDK example, this demonstrates the use of cusparseScsrilu0() for
+* computing the incompute-LU preconditioner and cusparseScsrsv_solve()
+* for solving triangular systems.  Specifically, the preconditioned
+* conjugate gradient method with an incomplete LU preconditioner is
+* used to solve the Laplacian operator in 2D on a uniform mesh.
+*
+* Note that the code in this example and the specific matrices used here
+* were chosen to demonstrate the use of the CUSPARSE library as simply
+* and as clearly as possible.  This is not optimized code and the input
+* matrices have been chosen for simplicity rather than performance.
+* These should not be used either as a performance guide or for
+* benchmarking purposes.
+*
+*/
 void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x)
 {
 	float alpha = 1.0;
@@ -135,5 +138,10 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 		k++;
 	}
 	
+}
+
+void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float *d_y)
+{
+
 }
 
