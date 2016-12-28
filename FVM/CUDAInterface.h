@@ -27,7 +27,7 @@ public:
 	void computeGlobalStiffnessMatrix();
 	void updateNodePositions(const float *hostNode);
 	void reset();
-	// first stroe for global stiffness matrix then for LHS of the linear system.
+	
 	struct CSRmatrix
 	{
 		int nnz;   // number of non-zero elements
@@ -58,7 +58,12 @@ private:
 	  float *d_Us;
 	  float *d_Vs;
 
+	  // first stroe for global stiffness matrix then for LHS of the linear system.
+	  // if jacobi iterative method is used, then store for the C matrix Part (see [Wang 2015]) 
 	  struct CSRmatrix csrMat;
+
+	  // inverse of the diagonal of csrMat, used for jacobi iterative method.
+	  float *d_B_1;
 
 	  float *d_b;  // first store for forces then for the RHS of the linear system.
 
@@ -75,4 +80,8 @@ private:
 
 
 	  CUDALinearSolvers * cuLinearSolver;
+
+	  // split the matrix to diagonal and off-diagonal parts, A only remains the negative of off-diagonal parts,
+	  // B_1 stores the inverse of the diagonal parts.
+	  void splitCSRMatJacobi(CSRmatrix &A,float *B_1);
 };

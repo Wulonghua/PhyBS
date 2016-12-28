@@ -457,6 +457,16 @@ __global__ void setLHSofLinearSystem(float *m_s, int n, float *Valptr, int *diag
 	Valptr[diagonalIdx[i]] += m_s[i];
 }
 
+__global__ void splitMatJacobi(float *Valptr, int n, int* diagIdx, float *B_1)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	B_1[i] = 1.0 / Valptr[diagIdx[i]];
+	Valptr[diagIdx[i]] = 0.0;
+}
+
+
 __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -498,6 +508,7 @@ __global__ void scaleDeviceArray(float *devicePtr, float * deviceScaledPtr, floa
 
 	deviceScaledPtr[i] = devicePtr[i] * s;
 }
+
 
 
 // this is helper function that is used for NSIGHT debug.
@@ -571,6 +582,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
 	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
 	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
+	cudaMalloc((void **)&d_B_1, sizeof(float) * n_nodes * 3);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
@@ -633,7 +645,9 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_velocities);
 	cudaFree(d_masses);
 	cudaFree(d_gravities);
-	cudaFree(d_masses_scaled);    
+	cudaFree(d_masses_scaled);
+	cudaFree(d_b);
+	cudaFree(d_B_1);
 }
 
 void CUDAInterface::updateNodePositions(const float *hostnodes)
@@ -645,6 +659,18 @@ void CUDAInterface::reset()
 {
 	cudaMemcpy(d_nodes, d_restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyDeviceToDevice);
 	cudaMemset(d_velocities, 0, sizeof(float) * 3 * n_nodes);
+}
+
+
+
+void CUDAInterface::splitCSRMatJacobi(CSRmatrix &A, float *B_1)
+{
+	splitMatJacobi<<<m_node_blocksPerGrid, m_node_threadsPerBlock*3>>>(A.d_Valptr, A.m,A.d_diagonalIdx,B_1);
+	cudaDeviceSynchronize();
+	int threadsPerBlock = 64;
+	int blocksPerGrid = (csrMat.nnz + threadsPerBlock - 1) / threadsPerBlock;
+	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(A.d_Valptr, A.d_Valptr, -1.0, A.nnz);
+	cudaDeviceSynchronize();
 }
 
 void CUDAInterface::computeInnerforces()
