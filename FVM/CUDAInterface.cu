@@ -521,6 +521,8 @@ __global__ void checkData(float *devicePtr)
 // helper function to print array in m*n format.
 __global__ void printData(float *devicePtr, int m, int n)
 {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
 	for (int i = 0; i < m; ++i)
 	{
 		for (int j = 0; j < n; ++j)
@@ -533,6 +535,8 @@ __global__ void printData(float *devicePtr, int m, int n)
 
 __global__ void printData(int *devicePtr, int m, int n)
 {
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
 	for (int i = 0; i < m; ++i)
 	{
 		for (int j = 0; j < n; ++j)
@@ -767,7 +771,7 @@ void CUDAInterface::doBackEuler(float *hostNode)
 
 	// split the matrix to diagonal and off-diagonal parts, csrMat only remains the negative of off-diagonal parts,
 	// B_1 stores the inverse of the diagonal parts.
-	splitCSRMatJacobi(csrMat, d_B_1);
+	//splitCSRMatJacobi(csrMat, d_B_1);
 
 	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
 	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);

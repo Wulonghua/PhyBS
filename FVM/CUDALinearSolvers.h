@@ -6,7 +6,10 @@
 #include <math.h>
 
 // CUDA Runtime
+#include <cuda.h>
 #include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <device_functions.h>
 
 // Using updated (v2) interfaces for CUBLAS and CUSPARSE
 #include <cusparse.h>
@@ -24,7 +27,7 @@ public:
 
 	void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
 	void directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x);
-	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float *d_y);
+	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float **d_y);
 	cublasHandle_t & getcuBlasHandle() { return cublasHandle; }
 
 
@@ -34,7 +37,7 @@ private:
 	void swap(float **a, float **b)
 	{
 		float *t = *a;
-		a = b;
+		*a = *b;
 		*b = t;
 	}
 
@@ -53,7 +56,7 @@ private:
 	cusolverStatus_t cusolverStatus;
 
 	/* Description of the A matrix*/
-	cusparseMatDescr_t descr;
+	cusparseMatDescr_t m_descr;
 
 	// followings are temped device memory for later conjugate gradient
 	float *d_p;
@@ -62,6 +65,9 @@ private:
 	// followings are temped device memory for later Chebyshev Jacobi solver.
 	float *d_y1;
 	float *d_y2;
+
+	int m_N_threadsPerBlock;
+	int m_N_blocksPerGrid;
 
 };
 

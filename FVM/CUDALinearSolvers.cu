@@ -2,6 +2,26 @@
 
 #include "CUDALinearSolvers.h"
 
+// c_i = a_i * b_i
+__global__ void multiplyArrayElementwise(float *a, float *b, int n, float *c)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	c[i] = a[i] * b[i];
+}
+
+// y2 = w2 * ( B_1 *(p + b) - y) + y
+// p = C * y1
+// see equation(12) in [Wang 15].
+__global__ void updateChebyshevSemiIteration(float w, float *B_1, float *p, float *b, float *y, int n, float *y2)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	y2[i] = w *(B_1[i] * (p[i] + b[i]) - y[i]) + y[i];
+}
+
 CUDALinearSolvers::CUDALinearSolvers(int rowNum, int nnz):
 N(rowNum), nz(nnz)
 {
@@ -22,19 +42,23 @@ N(rowNum), nz(nnz)
 	checkCudaErrors(cusolverStatus);
 
     /* Description of the A matrix*/
-    //descr = 0;
-    cusparseStatus = cusparseCreateMatDescr(&descr);
+    //m_descr = 0;
+	cusparseStatus = cusparseCreateMatDescr(&m_descr);
 
     checkCudaErrors(cusparseStatus);
 	
 	/* Define the properties of the matrix */
-    cusparseSetMatType(descr,CUSPARSE_MATRIX_TYPE_GENERAL);
-    cusparseSetMatIndexBase(descr,CUSPARSE_INDEX_BASE_ZERO);
+	cusparseSetMatType(m_descr, CUSPARSE_MATRIX_TYPE_GENERAL);
+	cusparseSetMatIndexBase(m_descr, CUSPARSE_INDEX_BASE_ZERO);
 
 	checkCudaErrors(cudaMalloc((void **)&d_p, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_Ax, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_y1, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_y2, N*sizeof(float)));
+
+	m_N_threadsPerBlock = 64;
+	m_N_blocksPerGrid = (N + m_N_threadsPerBlock - 1) / m_N_threadsPerBlock;
+
 }
 
 CUDALinearSolvers::~CUDALinearSolvers()
@@ -52,7 +76,7 @@ void CUDALinearSolvers::directCholcuSolver(float *d_val, int *d_row, int *d_col,
 {
 	int reorder = 0; //no reordering
 	int singularity = 0;
-	cusolverStatus = cusolverSpScsrlsvchol(cusolverHandle, N, nz, descr, d_val, d_row, d_col, d_b, 1e-3, reorder, d_x, &singularity);
+	cusolverStatus = cusolverSpScsrlsvchol(cusolverHandle, N, nz, m_descr, d_val, d_row, d_col, d_b, 1e-3, reorder, d_x, &singularity);
 	checkCudaErrors(cusolverStatus);
 }
 
@@ -99,7 +123,7 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 	const int max_iter = 10000;
 
 	// compute A*x
-	cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, descr, d_val, d_row, d_col, d_x, &beta, d_Ax);
+	cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_x, &beta, d_Ax);
 
 	// compute d_r =  alpham1* d_Ax + d_r = d_r - d_Ax;  
 	cublasSaxpy(cublasHandle, N, &alpham1, d_Ax, 1, d_r, 1);
@@ -123,7 +147,7 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 			cublasStatus = cublasScopy(cublasHandle, N, d_r, 1, d_p, 1);
 		}
 
-		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, descr, d_val, d_row, d_col, d_p, &beta, d_Ax);
+		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_p, &beta, d_Ax);
 		cublasStatus = cublasSdot(cublasHandle, N, d_p, 1, d_Ax, 1, &dot);
 		a = r1 / dot;
 
@@ -140,8 +164,28 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 	
 }
 
-void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float *d_y)
+void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float **d_y)
 {
+	//initialize y, y1
+	// y = 0;
+	// y1 = B_1 * (C*y+b)
+	cudaMemset(*d_y, 0, N*sizeof(float));
+	multiplyArrayElementwise<<<m_N_blocksPerGrid,m_N_threadsPerBlock>>>(d_B_1, d_b, N, d_y1);
 
+	float omega = 2.0 / (2.0 - rho * rho);
+
+	float alpha = 1.0;
+	float beta = 0.0;
+	//iteration 
+	for (int k = 0; k < 450;++k)
+	{
+		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_y1, &beta, d_p);
+		updateChebyshevSemiIteration<<<m_N_blocksPerGrid, m_N_threadsPerBlock>>>(omega, d_B_1, d_p, d_b, d_y, N, d_y2);
+		cudaDeviceSynchronize();
+		swap(d_y, &d_y1);
+		swap(&d_y1, &d_y2);
+		omega = 4.0 / (4.0 - rho*rho*omega);
+	}
+
+	swap(d_y,&d_y1);
 }
-
