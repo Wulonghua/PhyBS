@@ -226,6 +226,7 @@
     <ClInclude Include="CUDAInterface.h" />
     <ClInclude Include="CUDALinearSolvers.h" />
     <ClInclude Include="GeneratedFiles\ui_fvm.h" />
+    <ClInclude Include="GlobalHelpers.h" />
     <ClInclude Include="IsotropicMaterial.h" />
     <ClInclude Include="IsotropicNeohookeanMaterial.h" />
     <ClInclude Include="RenderWidget.h" />

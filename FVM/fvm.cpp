@@ -203,7 +203,7 @@ void FVM::DoTest()
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
 
-	/****************** test for cpu parallel elapse time *************************/
+	/****************** test for cpu parallel elapse time *************************
 	if (m_typeComputing == 0)
 	{
 		int elapse;
@@ -226,11 +226,11 @@ void FVM::DoTest()
 		elapse = ui.glWidget->restartTime();
 		std::cout << "time to solve the system: " << elapse << std::endl;
 		ui.glWidget->update();
-	}/**************************************************************************************/
+	}**************************************************************************************/
 
 	/*******************************test for gpu**************************************************/
-	else
-	{
+	//else
+	//{
 		int elapse;
 
 		ui.glWidget->restartTime();
@@ -238,20 +238,20 @@ void FVM::DoTest()
 		m_cudaInterface->computeInnerforces();
 
 		elapse = ui.glWidget->restartTime();
-		std::cout << "time to compute force: " << elapse << std::endl;
+		//std::cout << "time to compute force: " << elapse << std::endl;
 
 		m_cudaInterface->computeGlobalStiffnessMatrix();
 
 		elapse = ui.glWidget->restartTime();
-		std::cout << "time to compute K: " << elapse << std::endl;
+		//std::cout << "time to compute K: " << elapse << std::endl;
 
 		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
 
 		elapse = ui.glWidget->restartTime();
-		std::cout << "time to solve the system: " << elapse << std::endl;
+		//std::cout << "time to solve the system: " << elapse << std::endl;
 
 		ui.glWidget->update();
-	}
+	//}
 		/***************************************************************************************/
 }
 

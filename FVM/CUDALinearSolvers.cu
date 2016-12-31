@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CUDALinearSolvers.h"
+extern __global__ void printData(float *devicePtr, int m, int n);
 
 // c_i = a_i * b_i
 __global__ void multiplyArrayElementwise(float *a, float *b, int n, float *c)
@@ -172,15 +173,17 @@ void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, i
 	cudaMemset(*d_y, 0, N*sizeof(float));
 	multiplyArrayElementwise<<<m_N_blocksPerGrid,m_N_threadsPerBlock>>>(d_B_1, d_b, N, d_y1);
 
+	std::cout << "d_y1: " << std::endl;
+	printData << < 1, 1 >> > (d_y1, N, 1);
 	float omega = 2.0 / (2.0 - rho * rho);
 
 	float alpha = 1.0;
 	float beta = 0.0;
 	//iteration 
-	for (int k = 0; k < 450;++k)
+	for (int k = 0; k < 400; ++k )
 	{
 		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_y1, &beta, d_p);
-		updateChebyshevSemiIteration<<<m_N_blocksPerGrid, m_N_threadsPerBlock>>>(omega, d_B_1, d_p, d_b, d_y, N, d_y2);
+		updateChebyshevSemiIteration<<<m_N_blocksPerGrid, m_N_threadsPerBlock>>>(omega, d_B_1, d_p, d_b, *d_y, N, d_y2);
 		cudaDeviceSynchronize();
 		swap(d_y, &d_y1);
 		swap(&d_y1, &d_y2);

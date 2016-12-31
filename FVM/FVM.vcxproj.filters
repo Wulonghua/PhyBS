@@ -105,6 +105,9 @@
     <ClInclude Include="CUDALinearSolvers.h">
       <Filter>CUDA</Filter>
     </ClInclude>
+    <ClInclude Include="GlobalHelpers.h">
+      <Filter>CUDA</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FVM.rc" />

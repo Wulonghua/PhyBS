@@ -5,6 +5,7 @@ float atomicAdd(float *address, float val);
 
 
 #include "CUDAInterface.h"
+#include "GlobalHelpers.h"
 
 __host__ __device__ 
 void computeEnergy2FhatGradient(float mu, float lambda, float *Fhats, float *gradient)
@@ -475,80 +476,6 @@ __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 	mass_s[3 * i + 0] = mass_s[3 * i + 1] = mass_s[3 * i + 2] = mass[i] * s;
 }
 
-__global__ void setDeviceArray(float *devicePtr, float v, int num)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= num)	return;
-
-	devicePtr[i] = v;
-}
-
-__global__ void setDeviceArray(float *devicePtr, int * mask, float v, int num)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= num)	return;
-
-	if (mask[i] > 0)
-		devicePtr[i] = v;
-}
-
-// to prevent precision losing, split scale to s1 * s2
-__global__ void scaleDeviceArray(float *devicePtr, float s1, float s2, int num)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= num)	return;
-
-	devicePtr[i] = devicePtr[i]*s1*s2;
-}
-
-__global__ void scaleDeviceArray(float *devicePtr, float * deviceScaledPtr, float s, int n)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= n)	return;
-
-	deviceScaledPtr[i] = devicePtr[i] * s;
-}
-
-
-
-// this is helper function that is used for NSIGHT debug.
-__global__ void checkData(float *devicePtr)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	//printf("v: %f\n",devicePtr[7199]);
-}
-
-// helper function to print array in m*n format.
-__global__ void printData(float *devicePtr, int m, int n)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= n)	return;
-	for (int i = 0; i < m; ++i)
-	{
-		for (int j = 0; j < n; ++j)
-		{
-			printf(" %f", devicePtr[i * n + j]);
-		}
-		printf("\n");
-	}
-}
-
-__global__ void printData(int *devicePtr, int m, int n)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= n)	return;
-	for (int i = 0; i < m; ++i)
-	{
-		for (int j = 0; j < n; ++j)
-		{
-			printf(" %d", devicePtr[i * n + j]);
-		}
-		printf("\n");
-	}
-}
-
-
-
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
@@ -771,11 +698,12 @@ void CUDAInterface::doBackEuler(float *hostNode)
 
 	// split the matrix to diagonal and off-diagonal parts, csrMat only remains the negative of off-diagonal parts,
 	// B_1 stores the inverse of the diagonal parts.
-	//splitCSRMatJacobi(csrMat, d_B_1);
+	splitCSRMatJacobi(csrMat, d_B_1);
+	cuLinearSolver->chebyshevSemiIterativeSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_B_1, d_b, 0.9999, &d_velocities);
 
 	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
-	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
-	cudaDeviceSynchronize();
+	//cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+	//cudaDeviceSynchronize();
 	//std::cout << "velocities: " << std::endl;
 	//printData << < 1, 1 >> > (d_velocities,n_nodes*3,1);
 	//cudaDeviceSynchronize();
