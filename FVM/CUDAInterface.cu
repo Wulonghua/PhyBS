@@ -1,11 +1,11 @@
 #pragma once
-#ifdef __INTELLISENSE__   // just to remove the red underline waring (NVIDIA still has not solved the problem)
+#ifdef __INTELLISENSE__   // just to remove the red underline waring (NVIDIA has not solved the problem)
 float atomicAdd(float *address, float val);
 #endif
 
 
 #include "CUDAInterface.h"
-#include "GlobalHelpers.h"
+
 
 __host__ __device__ 
 void computeEnergy2FhatGradient(float mu, float lambda, float *Fhats, float *gradient)
@@ -458,15 +458,6 @@ __global__ void setLHSofLinearSystem(float *m_s, int n, float *Valptr, int *diag
 	Valptr[diagonalIdx[i]] += m_s[i];
 }
 
-__global__ void splitMatJacobi(float *Valptr, int n, int* diagIdx, float *B_1)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= n)	return;
-
-	B_1[i] = 1.0 / Valptr[diagIdx[i]];
-	Valptr[diagIdx[i]] = 0.0;
-}
-
 
 __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 {
@@ -513,7 +504,6 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
 	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
 	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
-	cudaMalloc((void **)&d_B_1, sizeof(float) * n_nodes * 3);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
@@ -578,7 +568,6 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_gravities);
 	cudaFree(d_masses_scaled);
 	cudaFree(d_b);
-	cudaFree(d_B_1);
 }
 
 void CUDAInterface::updateNodePositions(const float *hostnodes)
@@ -590,31 +579,6 @@ void CUDAInterface::reset()
 {
 	cudaMemcpy(d_nodes, d_restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyDeviceToDevice);
 	cudaMemset(d_velocities, 0, sizeof(float) * 3 * n_nodes);
-}
-
-
-
-void CUDAInterface::splitCSRMatJacobi(CSRmatrix &A, float *B_1)
-{
-	//std::cout << "A:" << std::endl;
-	//printData<< <1, 1 >> >(A.d_Valptr, 12, 12);
-	//cudaDeviceSynchronize();
-	
-	splitMatJacobi<<<m_node_blocksPerGrid, m_node_threadsPerBlock*3>>>(A.d_Valptr, A.m,A.d_diagonalIdx,B_1);
-	cudaDeviceSynchronize();
-
-	//std::cout << "B^-1:" << std::endl;
-	//printData << <1, 1 >> >(B_1, 1, 12);
-	//cudaDeviceSynchronize();
-
-	int threadsPerBlock = 64;
-	int blocksPerGrid = (csrMat.nnz + threadsPerBlock - 1) / threadsPerBlock;
-	scaleDeviceArray<<<blocksPerGrid, threadsPerBlock>>>(A.d_Valptr, A.d_Valptr, -1.0, A.nnz);
-	cudaDeviceSynchronize();
-
-	//std::cout << "A:" << std::endl;
-	//printData << <1, 1 >> >(A.d_Valptr, 12, 12);
-	//cudaDeviceSynchronize();
 }
 
 void CUDAInterface::computeInnerforces()
@@ -695,11 +659,7 @@ void CUDAInterface::doBackEuler(float *hostNode)
 	//printData << <1, 1 >> >(csrMat.d_Valptr, n_nodes*3, n_nodes*3);
 	//cudaDeviceSynchronize();
 
-
-	// split the matrix to diagonal and off-diagonal parts, csrMat only remains the negative of off-diagonal parts,
-	// B_1 stores the inverse of the diagonal parts.
-	splitCSRMatJacobi(csrMat, d_B_1);
-	cuLinearSolver->chebyshevSemiIterativeSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_B_1, d_b, 0.9999, &d_velocities);
+	cuLinearSolver->chebyshevSemiIterativeSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, csrMat.d_diagonalIdx,d_b, 0.999, &d_velocities);
 
 	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
 	//cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);

@@ -20,6 +20,8 @@
 #include <helper_functions.h>  
 #include <helper_cuda.h>
 
+#include "GlobalHelpers.h"
+
 class CUDALinearSolvers
 {
 public:
@@ -28,7 +30,7 @@ public:
 
 	void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
 	void directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x);
-	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float **d_y);
+	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y);
 	cublasHandle_t & getcuBlasHandle() { return cublasHandle; }
 
 
@@ -41,6 +43,10 @@ private:
 		*a = *b;
 		*b = t;
 	}
+
+	// split the matrix to diagonal and off-diagonal parts, A only remains the negative of off-diagonal parts,
+	// B_1 stores the inverse of the diagonal parts.
+	void splitCSRMatJacobi(float *Valptr, int m, int *diagonalIdx, float *B_1);
 
 	int N;        // number of A's rows
 	int nz;       // number of A's non-zero entries.
@@ -66,6 +72,9 @@ private:
 	// followings are temped device memory for later Chebyshev Jacobi solver.
 	float *d_y1;
 	float *d_y2;
+
+	// inverse of the diagonal of csrMat, used for jacobi iterative method.
+	float *d_B_1;
 
 	int m_N_threadsPerBlock;
 	int m_N_blocksPerGrid;

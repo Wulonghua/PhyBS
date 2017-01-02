@@ -12,6 +12,7 @@
 #include "CUDA_MATH.h"       // helper matrix operations 
 #include "helper_math.h" // helper vector(float3) operations
 #include "CUDALinearSolvers.h"
+#include "GlobalHelpers.h"
 
 
 class CUDAInterface
@@ -27,17 +28,6 @@ public:
 	void computeGlobalStiffnessMatrix();
 	void updateNodePositions(const float *hostNode);
 	void reset();
-	
-	struct CSRmatrix
-	{
-		int nnz;   // number of non-zero elements
-		int m;     // rows' number
-		float *d_Valptr;
-		int *d_Rowptr;
-		int *d_Colptr;
-		//   helper indices
-		int *d_diagonalIdx;
-	}; 
 
 private:
 	  int n_nodes;
@@ -62,9 +52,6 @@ private:
 	  // if jacobi iterative method is used, then store for the C matrix Part (see [Wang 2015]) 
 	  struct CSRmatrix csrMat;
 
-	  // inverse of the diagonal of csrMat, used for jacobi iterative method.
-	  float *d_B_1;
-
 	  float *d_b;  // first store for forces then for the RHS of the linear system.
 
 	  int *d_kIDinCSRval;
@@ -80,8 +67,4 @@ private:
 
 
 	  CUDALinearSolvers * cuLinearSolver;
-
-	  // split the matrix to diagonal and off-diagonal parts, A only remains the negative of off-diagonal parts,
-	  // B_1 stores the inverse of the diagonal parts.
-	  void splitCSRMatJacobi(CSRmatrix &A,float *B_1);
 };

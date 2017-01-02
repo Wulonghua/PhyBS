@@ -261,6 +261,7 @@
       <FileType>Document</FileType>
     </CudaCompile>
     <CudaCompile Include="CUDALinearSolvers.cu" />
+    <CudaCompile Include="GlobalHelpers.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

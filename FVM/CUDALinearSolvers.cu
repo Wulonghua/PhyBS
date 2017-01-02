@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CUDALinearSolvers.h"
-extern __global__ void printData(float *devicePtr, int m, int n);
+//extern __global__ void printData(float *devicePtr, int m, int n);
 
 // c_i = a_i * b_i
 __global__ void multiplyArrayElementwise(float *a, float *b, int n, float *c)
@@ -21,6 +21,15 @@ __global__ void updateChebyshevSemiIteration(float w, float *B_1, float *p, floa
 	if (i >= n)	return;
 
 	y2[i] = w *(B_1[i] * (p[i] + b[i]) - y[i]) + y[i];
+}
+
+__global__ void splitMatJacobi(float *Valptr, int n, int* diagIdx, float *B_1)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	B_1[i] = 1.0 / Valptr[diagIdx[i]];
+	Valptr[diagIdx[i]] = 0.0;
 }
 
 CUDALinearSolvers::CUDALinearSolvers(int rowNum, int nnz):
@@ -56,6 +65,7 @@ N(rowNum), nz(nnz)
 	checkCudaErrors(cudaMalloc((void **)&d_Ax, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_y1, N*sizeof(float)));
 	checkCudaErrors(cudaMalloc((void **)&d_y2, N*sizeof(float)));
+	checkCudaErrors(cudaMalloc((void **)&d_B_1, N*sizeof(float)));
 
 	m_N_threadsPerBlock = 64;
 	m_N_blocksPerGrid = (N + m_N_threadsPerBlock - 1) / m_N_threadsPerBlock;
@@ -71,7 +81,32 @@ CUDALinearSolvers::~CUDALinearSolvers()
 	cudaFree(d_Ax);
 	cudaFree(d_y1);
 	cudaFree(d_y2);
+	cudaFree(d_B_1);
 }
+
+void CUDALinearSolvers::splitCSRMatJacobi(float *Valptr, int n, int *diagonalIdx, float *B_1)
+{
+	//std::cout << "A:" << std::endl;
+	//printData<< <1, 1 >> >(A.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
+
+	splitMatJacobi << <m_N_blocksPerGrid, m_N_threadsPerBlock >> >(Valptr, n, diagonalIdx, B_1);
+	cudaDeviceSynchronize();
+
+	//std::cout << "B^-1:" << std::endl;
+	//printData << <1, 1 >> >(B_1, 1, 12);
+	//cudaDeviceSynchronize();
+
+	int threadsPerBlock = 64;
+	int blocksPerGrid = (nz + threadsPerBlock - 1) / threadsPerBlock;
+	scaleDeviceArray << <blocksPerGrid, threadsPerBlock >> >(Valptr, Valptr, -1.0, nz);
+	cudaDeviceSynchronize();
+
+	//std::cout << "A:" << std::endl;
+	//printData << <1, 1 >> >(A.d_Valptr, 12, 12);
+	//cudaDeviceSynchronize();
+}
+
 
 void CUDALinearSolvers::directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x)
 {
@@ -165,16 +200,35 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 	
 }
 
-void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, float *d_B_1, float *d_b, float rho, float **d_y)
+void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y)
 {
+	//std::cout << "d_val: " << std::endl;
+	//printData << < 1, 1 >> > (d_val, N, N);
+	//cudaDeviceSynchronize();
+
+	// split the matrix to diagonal and off-diagonal parts, csrMat only remains the negative of off-diagonal parts,
+	// B_1 stores the inverse of the diagonal parts.
+	splitCSRMatJacobi(d_val,N,d_diagonalIdx, d_B_1);
+
+	//std::cout << "d_B_1: " << std::endl;
+	//printData << < 1, 1 >> > (d_B_1, N, 1);
+	//cudaDeviceSynchronize();
+
+	//std::cout << "d_val: " << std::endl;
+	//printData << < 1, 1 >> > (d_val, N, N);
+	//cudaDeviceSynchronize();
+	
 	//initialize y, y1
 	// y = 0;
 	// y1 = B_1 * (C*y+b)
 	cudaMemset(*d_y, 0, N*sizeof(float));
 	multiplyArrayElementwise<<<m_N_blocksPerGrid,m_N_threadsPerBlock>>>(d_B_1, d_b, N, d_y1);
 
-	std::cout << "d_y1: " << std::endl;
-	printData << < 1, 1 >> > (d_y1, N, 1);
+	//std::cout << "d_y1: " << std::endl;
+	//printData << < 1, 1 >> > (d_y1, N, 1);
+	//cudaDeviceSynchronize();
+
+
 	float omega = 2.0 / (2.0 - rho * rho);
 
 	float alpha = 1.0;
@@ -182,11 +236,45 @@ void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, i
 	//iteration 
 	for (int k = 0; k < 400; ++k )
 	{
+		//std::cout << "C: " << std::endl;
+		//printData << < 1, 1 >> > (d_val, 12, 12);
+		//cudaDeviceSynchronize();
 		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_y1, &beta, d_p);
+		//std::cout << "w:" << omega << std::endl;
+		//std::cout << "d_p: " << std::endl;
+		//printData << < 1, 1 >> > (d_p, N, 1);
+		//cudaDeviceSynchronize();
+
 		updateChebyshevSemiIteration<<<m_N_blocksPerGrid, m_N_threadsPerBlock>>>(omega, d_B_1, d_p, d_b, *d_y, N, d_y2);
 		cudaDeviceSynchronize();
+
+		//std::cout << "d_y: " << std::endl;
+		//printData << < 1, 1 >> > (*d_y, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y1: " << std::endl;
+		//printData << < 1, 1 >> > (d_y1, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y2: " << std::endl;
+		//printData << < 1, 1 >> > (d_y2, 1, N);
+		//cudaDeviceSynchronize();
+
 		swap(d_y, &d_y1);
 		swap(&d_y1, &d_y2);
+
+		//std::cout << "d_y: " << std::endl;
+		//printData << < 1, 1 >> > (*d_y, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y1: " << std::endl;
+		//printData << < 1, 1 >> > (d_y1, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y2: " << std::endl;
+		//printData << < 1, 1 >> > (d_y2, 1, N);
+		//cudaDeviceSynchronize();
+
 		omega = 4.0 / (4.0 - rho*rho*omega);
 	}
 
