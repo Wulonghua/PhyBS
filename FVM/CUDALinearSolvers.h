@@ -30,7 +30,8 @@ public:
 
 	void conjugateGradient(float *d_val, int *d_row, int *d_col, float *d_r, float *d_x);
 	void directCholcuSolver(float *d_val, int *d_row, int *d_col, float *d_b, float *d_x);
-	void chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y);
+	void chebyshevSemiIteration(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y);
+	void jacobiIteration(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float **d_y);
 	cublasHandle_t & getcuBlasHandle() { return cublasHandle; }
 
 

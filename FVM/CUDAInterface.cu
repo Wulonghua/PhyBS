@@ -659,10 +659,13 @@ void CUDAInterface::doBackEuler(float *hostNode)
 	//printData << <1, 1 >> >(csrMat.d_Valptr, n_nodes*3, n_nodes*3);
 	//cudaDeviceSynchronize();
 
-	cuLinearSolver->chebyshevSemiIterativeSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, csrMat.d_diagonalIdx,d_b, 0.999, &d_velocities);
+	// has bug
+	//cuLinearSolver->chebyshevSemiIteration(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, csrMat.d_diagonalIdx,d_b, 0.999, &d_velocities);
+
+	//cuLinearSolver->jacobiIteration(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, csrMat.d_diagonalIdx, d_b, &d_velocities);
 
 	//cuLinearSolver->conjugateGradient(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
-	//cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
+	cuLinearSolver->directCholcuSolver(csrMat.d_Valptr, csrMat.d_Rowptr, csrMat.d_Colptr, d_b, d_velocities);
 	//cudaDeviceSynchronize();
 	//std::cout << "velocities: " << std::endl;
 	//printData << < 1, 1 >> > (d_velocities,n_nodes*3,1);

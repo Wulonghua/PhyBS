@@ -23,6 +23,16 @@ __global__ void updateChebyshevSemiIteration(float w, float *B_1, float *p, floa
 	y2[i] = w *(B_1[i] * (p[i] + b[i]) - y[i]) + y[i];
 }
 
+// x = B_1 * (p + b)
+// p = C * x0;
+__global__ void updateJacobiIteration(float *B_1, float *p, float *b, int n, float *x)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n)	return;
+
+	x[i] = B_1[i] * (p[i] + b[i]);
+}
+
 __global__ void splitMatJacobi(float *Valptr, int n, int* diagIdx, float *B_1)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -200,7 +210,7 @@ void CUDALinearSolvers::conjugateGradient(float *d_val, int *d_row, int *d_col, 
 	
 }
 
-void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y)
+void CUDALinearSolvers::chebyshevSemiIteration(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float rho, float **d_y)
 {
 	//std::cout << "d_val: " << std::endl;
 	//printData << < 1, 1 >> > (d_val, N, N);
@@ -279,4 +289,51 @@ void CUDALinearSolvers::chebyshevSemiIterativeSolver(float *d_val, int *d_row, i
 	}
 
 	swap(d_y,&d_y1);
+}
+
+void CUDALinearSolvers::jacobiIteration(float *d_val, int *d_row, int *d_col, int *d_diagonalIdx, float *d_b, float **d_y)
+{
+	splitCSRMatJacobi(d_val, N, d_diagonalIdx, d_B_1);
+
+	cudaMemset(*d_y, 0, N*sizeof(float));
+	multiplyArrayElementwise << <m_N_blocksPerGrid, m_N_threadsPerBlock >> >(d_B_1, d_b, N, d_y1);
+
+	float alpha = 1.0;
+	float beta = 0.0;
+	//iteration 
+	for (int k = 0; k < 1000; ++k)
+	{
+		//std::cout << "C: " << std::endl;
+		//printData << < 1, 1 >> > (d_val, 12, 12);
+		//cudaDeviceSynchronize();
+		cusparseScsrmv(cusparseHandle, CUSPARSE_OPERATION_NON_TRANSPOSE, N, N, nz, &alpha, m_descr, d_val, d_row, d_col, d_y1, &beta, d_p);
+		//std::cout << "w:" << omega << std::endl;
+		//std::cout << "d_p: " << std::endl;
+		//printData << < 1, 1 >> > (d_p, N, 1);
+		//cudaDeviceSynchronize();
+
+		updateJacobiIteration<< <m_N_blocksPerGrid, m_N_threadsPerBlock >> >(d_B_1, d_p, d_b, N, d_y2);
+		cudaDeviceSynchronize();
+
+		//std::cout << "d_y1: " << std::endl;
+		//printData << < 1, 1 >> > (d_y1, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y2: " << std::endl;
+		//printData << < 1, 1 >> > (d_y2, 1, N);
+		//cudaDeviceSynchronize();
+
+		swap(&d_y1, &d_y2);
+
+		//std::cout << "d_y1: " << std::endl;
+		//printData << < 1, 1 >> > (d_y1, 1, N);
+		//cudaDeviceSynchronize();
+
+		//std::cout << "d_y2: " << std::endl;
+		//printData << < 1, 1 >> > (d_y2, 1, N);
+		//cudaDeviceSynchronize();
+	}
+
+	swap(d_y, &d_y1);
+
 }
