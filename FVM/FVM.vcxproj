@@ -177,6 +177,7 @@
     <ClCompile Include="IsotropicMaterial.cpp" />
     <ClCompile Include="IsotropicNeohookeanMaterial.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PosBaseDynamic.cpp" />
     <ClCompile Include="RenderWidget.cpp" />
     <ClCompile Include="TetMesh.cpp" />
     <ClCompile Include="TimeIntegration.cpp" />
@@ -229,6 +230,7 @@
     <ClInclude Include="GlobalHelpers.h" />
     <ClInclude Include="IsotropicMaterial.h" />
     <ClInclude Include="IsotropicNeohookeanMaterial.h" />
+    <ClInclude Include="PosBaseDynamic.h" />
     <ClInclude Include="RenderWidget.h" />
     <ClInclude Include="TetMesh.h" />
     <ClInclude Include="TimeIntegration.h" />

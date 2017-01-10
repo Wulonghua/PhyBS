@@ -68,6 +68,9 @@
     <ClCompile Include="IsotropicNeohookeanMaterial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PosBaseDynamic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="fvm.h">
@@ -107,6 +110,9 @@
     </ClInclude>
     <ClInclude Include="GlobalHelpers.h">
       <Filter>CUDA</Filter>
+    </ClInclude>
+    <ClInclude Include="PosBaseDynamic.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

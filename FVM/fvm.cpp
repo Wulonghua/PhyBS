@@ -18,6 +18,9 @@ FVM::FVM(QWidget *parent)
 	ui.glWidget->startTime();
 	m_IsoMaterial = std::make_shared<IsotropicNeohookeanMaterial>(m_tetMesh);
 
+	// initialize position based dynamics
+	m_pbd = std::make_shared<PosBaseDynamic>(m_tetMesh->getNodes(),m_tetMesh->getTetsNum());
+
 
 	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	//int num_tets, const int *tets, const float youngs, const float nu, const float density,

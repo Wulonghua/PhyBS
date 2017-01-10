@@ -13,6 +13,7 @@
 #include "TimeIntegration.h"
 #include "IsotropicMaterial.h"
 #include "IsotropicNeohookeanMaterial.h"
+#include "PosBaseDynamic.h"
 #include "CUDAInterface.h"
 
 class FVM : public QMainWindow
@@ -41,6 +42,7 @@ private:
 	std::shared_ptr<TetMesh> m_tetMesh;
 	std::shared_ptr<TimeIntegration> m_integrator;
 	std::shared_ptr<IsotropicNeohookeanMaterial> m_IsoMaterial;
+	std::shared_ptr<PosBaseDynamic> m_pbd;
 	std::shared_ptr<CUDAInterface> m_cudaInterface;
 
 	QTimer *m_idleTimer;
