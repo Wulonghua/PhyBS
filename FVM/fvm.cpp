@@ -206,13 +206,16 @@ void FVM::DoTest()
 	//std::cout << "K: " << std::endl;
 	//std::cout << K << std::endl;
 
-	/****************** test for cpu parallel elapse time *************************
+	/****************** test for cpu parallel elapse time *************************/
 	if (m_typeComputing == 0)
 	{
 		int elapse;
 
 		ui.glWidget->restartTime();
-		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats(m_numThreads);
+		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
+
+		std::cout << "forces: " << std::endl;
+		std::cout << forces << std::endl;
 
 		elapse = ui.glWidget->restartTime();
 		std::cout << "time to compute force: " << elapse << std::endl;
@@ -229,11 +232,11 @@ void FVM::DoTest()
 		elapse = ui.glWidget->restartTime();
 		std::cout << "time to solve the system: " << elapse << std::endl;
 		ui.glWidget->update();
-	}**************************************************************************************/
+	}/**************************************************************************************/
 
 	/*******************************test for gpu**************************************************/
-	//else
-	//{
+	else
+	{
 		int elapse;
 
 		ui.glWidget->restartTime();
@@ -254,7 +257,7 @@ void FVM::DoTest()
 		//std::cout << "time to solve the system: " << elapse << std::endl;
 
 		ui.glWidget->update();
-	//}
+	}
 		/***************************************************************************************/
 }
 

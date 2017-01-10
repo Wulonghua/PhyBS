@@ -55,6 +55,7 @@ public:
 	void addNodeForce(int nodeID, const Eigen::Vector3f &force) { m_nodes_forces.col(nodeID) += force; }
 	void initForcesFromGravityExternals() { m_nodes_forces = m_nodes_gravity + m_nodes_external_forces; }
 	void resetExternalForce() { m_nodes_external_forces.setZero();}
+	void clearConstraintForces();
 	void dragFace(int faceID, const Eigen::Vector3f &dragline);
 	void dragFaceRing(int faceID, const Eigen::Vector3f &dragline);
 	// approximate method, shoot the ray and test the center of each face, if it is within certain distance
