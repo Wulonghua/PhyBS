@@ -38,6 +38,7 @@ public:
 	Eigen::MatrixXf & getVelocities() { return m_velocities; }
 	Eigen::MatrixXf & getForces() { return m_nodes_forces; }
 	Eigen::VectorXf & getMasses() { return m_nodes_mass; }
+	Eigen::VectorXf & getInvMasses() { return m_nodes_invMass; }
 	Eigen::MatrixXf & getRestPosition() { return m_rest_positions; }
 	Eigen::MatrixXi & getTets() { return m_tets; }
 	std::vector<int> & getConstraintIDs() { return m_constraintIDs; }
@@ -48,6 +49,7 @@ public:
 	Eigen::Vector3f getFaceCenter(int i) { return m_face_centers.col(i); }
 	Eigen::Matrix3f getAN(int tetID) { return m_ANs.block<3, 3>(0, 3 * tetID); }
 	Eigen::Matrix3f getDmInv(int tetID) { return m_Dm_inverses.block<3, 3>(0, 3 * tetID); }
+	Eigen::MatrixXf & getDmInvs() { return m_Dm_inverses; }
 	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
 	
 
@@ -89,6 +91,7 @@ private:
 	Eigen::MatrixXf m_ANs;
 
 	Eigen::VectorXf m_nodes_mass;		// nodes 
+	Eigen::VectorXf m_nodes_invMass;
 	Eigen::MatrixXf m_nodes_gravity;
 	Eigen::MatrixXf m_nodes_external_forces;
 

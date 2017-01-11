@@ -19,7 +19,7 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 										     float t)
 {
 	Eigen::Vector3f stretchStiff(0.8,0.8,0.8);
-	Eigen::Vector3f shearStiff(0.8,0.8,0.8);
+	Eigen::Vector3f shearStiff(1.0,1.0,1.0);
 	Eigen::Vector3f d_p0, d_p1, d_p2, d_p3;
 	int idx[4]; // node's index
 
@@ -33,11 +33,15 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 			idx[2] = tets(2, j);
 			idx[3] = tets(3, j);
 			solveStrainConstraints(
-				pos.col(idx[0]), invMass(idx[0]), d_p0,
-				pos.col(idx[1]), invMass(idx[1]), d_p1,
-				pos.col(idx[2]), invMass(idx[2]), d_p2,
-				pos.col(idx[3]), invMass(idx[3]), d_p3,
+				m_pos.col(idx[0]), invMass(idx[0]), d_p0,
+				m_pos.col(idx[1]), invMass(idx[1]), d_p1,
+				m_pos.col(idx[2]), invMass(idx[2]), d_p2,
+				m_pos.col(idx[3]), invMass(idx[3]), d_p3,
 				invRestMat.block<3, 3>(0, 3 * j), stretchStiff, shearStiff);
+			m_pos.col(idx[0]) += d_p0;
+			m_pos.col(idx[1]) += d_p1;
+			m_pos.col(idx[2]) += d_p2;
+			m_pos.col(idx[3]) += d_p3;
 		}
 	}
 	vel = (m_pos - pos) / t;
@@ -55,7 +59,7 @@ void PosBaseDynamic::solveStrainConstraints(const Eigen::Vector3f &p0, const flo
 	d_p2.setZero();
 	d_p3.setZero();
 
-	Eigen::Matrix3Xf P;
+	Eigen::Matrix3f P;
 	Eigen::Vector3f fi, fj;
 	Eigen::Vector3f d[4];
 	float Sij, lambda;

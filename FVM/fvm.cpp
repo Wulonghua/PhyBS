@@ -209,28 +209,33 @@ void FVM::DoTest()
 	/****************** test for cpu parallel elapse time *************************/
 	if (m_typeComputing == 0)
 	{
-		int elapse;
+		//int elapse;
 
-		ui.glWidget->restartTime();
+		//ui.glWidget->restartTime();
+		//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
+
+		//std::cout << "forces: " << std::endl;
+		//std::cout << forces << std::endl;
+
+		//elapse = ui.glWidget->restartTime();
+		//std::cout << "time to compute force: " << elapse << std::endl;
+
+
+		//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+
+		//elapse = ui.glWidget->restartTime();
+		//std::cout << "time to compute K: " << elapse << std::endl;
+
+		//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+		//	m_tetMesh->getVelocities(),
+		//	forces, sK);
+		//elapse = ui.glWidget->restartTime();
+		//std::cout << "time to solve the system: " << elapse << std::endl;
+		//ui.glWidget->update();
+
 		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
-
-		std::cout << "forces: " << std::endl;
-		std::cout << forces << std::endl;
-
-		elapse = ui.glWidget->restartTime();
-		std::cout << "time to compute force: " << elapse << std::endl;
-
-
-		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
-
-		elapse = ui.glWidget->restartTime();
-		std::cout << "time to compute K: " << elapse << std::endl;
-
-		m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-			m_tetMesh->getVelocities(),
-			forces, sK);
-		elapse = ui.glWidget->restartTime();
-		std::cout << "time to solve the system: " << elapse << std::endl;
+		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.005);
 		ui.glWidget->update();
 	}/**************************************************************************************/
 

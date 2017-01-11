@@ -49,6 +49,7 @@ void TetMesh::initNodesFromFile(QString filename)
 
 
 		m_nodes_mass = Eigen::VectorXf::Zero(n_nodes);
+		m_nodes_invMass = Eigen::VectorXf::Zero(n_nodes);
 		m_velocities = Eigen::MatrixXf::Zero(3, n_nodes);
 
 		//for test
@@ -191,6 +192,17 @@ void TetMesh::initModel()
 		computeANs(i);
 	}	
 	m_nodes_gravity.row(1) = -9.8 * m_nodes_mass.transpose();
+	
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		m_nodes_invMass(i) = 1.0 / m_nodes_mass(i);
+	}
+
+	for (int i = 0; i < m_constraintIDs.size(); ++i)
+	{
+		m_nodes_invMass(m_constraintIDs[i]) = 0.0;
+	}
+
 	std::cout << "tet model has been initialized."<<std::endl;
 }
 
