@@ -142,14 +142,18 @@ void FVM::DoOneStep()
 	/******************************Back Euler integration**********************************/
 	if (m_typeComputing == 0)
 	{
+		//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
+		////Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+
+		//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+
+		//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+		//	m_tetMesh->getVelocities(),
+		//	forces, sK);
+
 		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
-		//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
-
-		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
-
-		m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-			m_tetMesh->getVelocities(),
-			forces, sK);
+		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.01);
 	}
 	else
 	{

@@ -18,12 +18,17 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 										     const Eigen::VectorXf &invMass,
 										     float t)
 {
-	Eigen::Vector3f stretchStiff(0.8,0.8,0.8);
+	Eigen::Vector3f stretchStiff(1.0,1.0,1.0);
 	Eigen::Vector3f shearStiff(1.0,1.0,1.0);
 	Eigen::Vector3f d_p0, d_p1, d_p2, d_p3;
 	int idx[4]; // node's index
-
-	m_pos = pos + t * (vel + t * forces);
+	int n_nodes = invMass.size();
+	Eigen::MatrixXf d_v = Eigen::MatrixXf::Zero(3, n_nodes);
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		d_v.col(i) = t * invMass(i) * forces.col(i);
+	}
+	m_pos = pos + t * (vel + d_v);
 	for (int i = 0; i < n_maxIters; ++i)
 	{
 		for (int j = 0; j < n_tets; ++j)
@@ -44,7 +49,7 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 			m_pos.col(idx[3]) += d_p3;
 		}
 	}
-	vel = (m_pos - pos) / t;
+	vel = 0.99 * (m_pos - pos) / t;
 	pos = m_pos;
 }
 
