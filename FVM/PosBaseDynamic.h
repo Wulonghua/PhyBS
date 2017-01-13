@@ -27,6 +27,7 @@ private:
 								const Eigen::Matrix3f &invRestMat, const Eigen::Vector3f &stretchK, const Eigen::Vector3f &shearK);
 
 	Eigen::MatrixXf m_pos;	// nodes' positions during iteration
+	float m_eps;
 	int n_tets;
 	int n_maxIters;
 };

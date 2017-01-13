@@ -153,7 +153,7 @@ void FVM::DoOneStep()
 
 		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
 		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
-			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.01);
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.005);
 	}
 	else
 	{

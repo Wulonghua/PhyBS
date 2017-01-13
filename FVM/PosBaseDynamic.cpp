@@ -1,8 +1,7 @@
 #include "PosBaseDynamic.h"
 
-
 PosBaseDynamic::PosBaseDynamic(Eigen::MatrixXf& X, int numtets):
-m_pos(X), n_tets(numtets), n_maxIters(5)
+m_pos(X), n_tets(numtets), n_maxIters(5), m_eps(1e-6)
 {
 }
 
@@ -18,8 +17,8 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 										     const Eigen::VectorXf &invMass,
 										     float t)
 {
-	Eigen::Vector3f stretchStiff(1.0,1.0,1.0);
-	Eigen::Vector3f shearStiff(1.0,1.0,1.0);
+	Eigen::Vector3f stretchStiff(0.8,0.8,0.8);
+	Eigen::Vector3f shearStiff(0.8,0.8,0.8);
 	Eigen::Vector3f d_p0, d_p1, d_p2, d_p3;
 	int idx[4]; // node's index
 	int n_nodes = invMass.size();
@@ -49,7 +48,7 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 			m_pos.col(idx[3]) += d_p3;
 		}
 	}
-	vel = 0.99 * (m_pos - pos) / t;
+	vel = (m_pos - pos) / t;
 	pos = m_pos;
 }
 
@@ -94,6 +93,9 @@ void PosBaseDynamic::solveStrainConstraints(const Eigen::Vector3f &p0, const flo
 					 invMass1 * d[1].squaredNorm() +
 					 invMass2 * d[2].squaredNorm() +
 					 invMass3 * d[3].squaredNorm();
+
+			if (lambda < m_eps)
+				continue;
 
 			if (i == j)
 			{
