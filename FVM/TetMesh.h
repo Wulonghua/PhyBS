@@ -29,6 +29,8 @@ public:
 	void computeForces();
 	Eigen::Matrix3f computeDeformationGradient(int tetID);
 
+	Eigen::MatrixXf computeExternalForces();
+
 	void drawTetBoundFace();
 	void drawDraggedNodes(int faceID);
 	void updateNodesVelocities(const Eigen::MatrixXf & pos, const Eigen::MatrixXf & vel);

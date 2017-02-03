@@ -560,3 +560,10 @@ void TetMesh::clearConstraintForces()
 	}
 }
 
+Eigen::MatrixXf TetMesh::computeExternalForces()
+{
+	initForcesFromGravityExternals();
+	clearConstraintForces();
+	return m_nodes_forces;
+}
+

@@ -151,9 +151,9 @@ void FVM::DoOneStep()
 		//	m_tetMesh->getVelocities(),
 		//	forces, sK);
 
-		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
+		Eigen::MatrixXf forces = m_tetMesh->computeExternalForces();
 		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
-			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.005);
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.01);
 	}
 	else
 	{
@@ -239,7 +239,7 @@ void FVM::DoTest()
 
 		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
 		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
-			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.005);
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), m_integrator->getTimeStep());
 		ui.glWidget->update();
 	}/**************************************************************************************/
 
