@@ -8,19 +8,19 @@ The codes was tested with the following configurations:
 ## Features
 
 * FEM/FVM force-based simulation[1]                                                    
-Demo
+
 [![Video](https://img.youtube.com/vi/RZTT9vSTd5M/0.jpg)](https://www.youtube.com/watch?v=RZTT9vSTd5M)
 
 * Stable simulation using implicit integration[2], accelerated by OpenMP
-Demo
+
 [![Video](https://img.youtube.com/vi/SMo9IlWolVs/0.jpg)](https://www.youtube.com/watch?v=SMo9IlWolVs)
 
 * Compute stiffness matrix of hyperelasic materials with two different methods: invariants-based[3] and stretch-based[4]
-Demo
+
 [![Video](https://img.youtube.com/vi/xZR5uczls28/0.jpg)](https://www.youtube.com/watch?v=xZR5uczls28)
 
 * Position based dynamics using strain constraints[5]                              
-Demo
+
 [![Video](https://img.youtube.com/vi/HgDR9nFfIRs/0.jpg)](https://www.youtube.com/watch?v=HgDR9nFfIRs)
 
 ## To-do List
