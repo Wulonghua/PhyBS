@@ -7,7 +7,7 @@ The codes was tested with the following configurations:
 
 ## Features
 
-* FEM/FVM force-based simulation[1]
+* FEM/FVM force-based simulation[1]                                                    
 Demo
 [![Video](https://img.youtube.com/vi/RZTT9vSTd5M/0.jpg)](https://www.youtube.com/watch?v=RZTT9vSTd5M)
 
@@ -19,7 +19,7 @@ Demo
 Demo
 [![Video](https://img.youtube.com/vi/xZR5uczls28/0.jpg)](https://www.youtube.com/watch?v=xZR5uczls28)
 
-* Position based dynamics using strain constraints[5]
+* Position based dynamics using strain constraints[5]                              
 Demo
 [![Video](https://img.youtube.com/vi/HgDR9nFfIRs/0.jpg)](https://www.youtube.com/watch?v=HgDR9nFfIRs)
 
