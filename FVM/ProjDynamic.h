@@ -13,6 +13,9 @@ public:
 	virtual ~ProjDynamic();
 
 	void buildGlobalSolverMatrix(const Eigen::VectorXf & node_mass, const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &Bm);
+	Eigen::VectorXf projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
+								const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &pos,
+								const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext);
 private:
 
 	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalSolverMat;

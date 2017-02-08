@@ -69,3 +69,21 @@ void ProjDynamic::buildGlobalSolverMatrix(const Eigen::VectorXf &node_mass, cons
 		}
 	}
 }
+
+Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
+													 const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &pos,
+													 const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext)
+{
+	Eigen::MatrixXf s = Eigen::MatrixXf::Zero(3, n_nodes);
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		s.col(i) = t*t * node_inv_mass[i] * fext.col(i);
+	}
+
+	s = pos + t * vel + s;
+
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		s.col(i) = s.col(i)*node_mass[i] / (t*t);
+	}
+}
