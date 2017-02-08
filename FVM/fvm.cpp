@@ -6,8 +6,10 @@ FVM::FVM(QWidget *parent)
 	ui.setupUi(this);
 	// ui setting
 	m_comboboxType = new QComboBox();
-	m_comboboxType->addItem(QStringLiteral("CPU"));
-	m_comboboxType->addItem(QStringLiteral("GPU"));
+	m_comboboxType->addItem(QStringLiteral("CPU_force"));
+	m_comboboxType->addItem(QStringLiteral("CPU_PBD"));
+	m_comboboxType->addItem(QStringLiteral("CPU_ProjDynamic"));
+	m_comboboxType->addItem(QStringLiteral("GPU_force"));
 	ui.mainToolBar->addWidget(m_comboboxType);
 
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -142,18 +144,24 @@ void FVM::DoOneStep()
 	/******************************Back Euler integration**********************************/
 	if (m_typeComputing == 0)
 	{
-		//Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2();
-		////Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
+		Eigen::MatrixXf forces = m_IsoMaterial->computeInnerForcesfromFhats2(m_numThreads);
+		//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
 
-		//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
-		//m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-		//	m_tetMesh->getVelocities(),
-		//	forces, sK);
-
+		m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
+			m_tetMesh->getVelocities(),
+			forces, sK);
+	}
+	else if (m_typeComputing == 1)
+	{
 		Eigen::MatrixXf forces = m_tetMesh->computeExternalForces();
 		m_pbd->doStepStrainConstraints(m_tetMesh->getNodes(), m_tetMesh->getVelocities(), forces, m_tetMesh->getDmInvs(),
-			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), 0.01);
+			m_tetMesh->getTets(), m_tetMesh->getInvMasses(), m_integrator->getTimeStep());
+	}
+	else if (m_typeComputing == 2)
+	{
+
 	}
 	else
 	{

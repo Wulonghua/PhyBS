@@ -53,7 +53,7 @@ private:
 
 	int m_numThreads;
 
-	int m_typeComputing;  // 0: using CPU; 1: using GPU;
+	int m_typeComputing;  // 0: using CPU_force; 1: using GPU_force;
 
 	// UI
 	QComboBox *m_comboboxType;
