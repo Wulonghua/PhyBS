@@ -44,6 +44,7 @@ public:
 	Eigen::MatrixXf & getRestPosition() { return m_rest_positions; }
 	Eigen::MatrixXi & getTets() { return m_tets; }
 	std::vector<int> & getConstraintIDs() { return m_constraintIDs; }
+	Eigen::VectorXf & getTetVolumes() { return m_tet_vols; }
 	int getNodesNum() { return n_nodes; }
 	int getTetsNum() { return n_tets; }
 	float getE() { return m_E; }
@@ -83,6 +84,7 @@ private:
 	Eigen::MatrixXf m_rest_positions;	// nodes' restposition	: 3*n matrix
 	Eigen::MatrixXf m_velocities;		// nodes' velocities    : 3*n matrix
 	Eigen::MatrixXi m_tets;				// tetrahedra's indices : 4*m matrix
+	Eigen::VectorXf m_tet_vols;			// tetrahedra's volume  : m-length vector
 
 	Eigen::MatrixXi m_bound_faces;		// the surfaces' indices of tet-mesh's boundary.
 	Eigen::MatrixXf m_bound_normals;    // the surfaces' normals.

@@ -106,6 +106,7 @@ void TetMesh::initTetsFromFile(QString filename)
 		//load Tets' indices
 		int prefix;
 		m_tets = Eigen::MatrixXi::Zero(4, n_tets);
+		m_tet_vols.resize(n_tets);
 		for (size_t i = 0; i < n_tets; ++i)
 		{
 			fin >> prefix >> m_tets(0, i) >> m_tets(1, i) >> m_tets(2, i) >> m_tets(3, i);
@@ -183,7 +184,8 @@ void TetMesh::initModel()
 		Dm.col(0) = (m_nodes.col(m_tets(1, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(1) = (m_nodes.col(m_tets(2, i)) - m_nodes.col(m_tets(0, i)));
 		Dm.col(2) = (m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i)));
-		w = std::abs(Dm.determinant()) / 24.0 * m_density;
+		m_tet_vols[i] = std::abs(Dm.determinant()) / 6.0;
+		w = m_tet_vols[i] / 4.0 * m_density;
 		for (size_t j = 0; j < 4; ++j)
 		{
 			m_nodes_mass(m_tets(j, i)) += w;

@@ -17,7 +17,7 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 										     const Eigen::VectorXf &invMass,
 										     float t)
 {
-	Eigen::Vector3f stretchStiff(0.8,0.8,0.8);
+	Eigen::Vector3f stretchStiff(1.0,1.0,1.0);
 	Eigen::Vector3f shearStiff(0.8,0.8,0.8);
 	Eigen::Vector3f d_p0, d_p1, d_p2, d_p3;
 	int idx[4]; // node's index

@@ -17,6 +17,7 @@ private:
 
 	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalSolverMat;
 	Eigen::VectorXf m_stiffWeight;
+	float m_stiffness;
 
 	int n_nodes;
 	int n_tets;

@@ -1,12 +1,16 @@
 #include "ProjDynamic.h"
 
 
-ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh)
+ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh):
+m_stiffness(5000)
 {
 	n_nodes = tetMesh->getNodesNum();
 	n_tets = tetMesh->getTetsNum();
 	m_globalSolverMat.resize(3 * n_nodes, 3 * n_nodes);
 	m_stiffWeight.resize(n_tets);
+
+	for (int i = 0; i < n_tets; ++i)
+		m_stiffWeight[i] = m_stiffness * tetMesh->getTetVolumes()[i];
 }
 
 
@@ -44,7 +48,7 @@ void ProjDynamic::buildGlobalSolverMatrix(const Eigen::VectorXf &node_mass, cons
 		Ac.block<3, 1>(0, 3) = Ac.block<3, 1>(3, 4) = Ac.block<3, 1>(6, 5) = DmInvT.col(0);
 		Ac.block<3, 1>(0, 6) = Ac.block<3, 1>(3, 7) = Ac.block<3, 1>(6, 8) = DmInvT.col(1);
 		Ac.block<3, 1>(0, 9) = Ac.block<3, 1>(3, 10) = Ac.block<3, 1>(6, 11) = DmInvT.col(2);
-		wAcTAc = m_stiffWeight * (Ac.transpose()*Ac);
+		wAcTAc = m_stiffWeight[k] * (Ac.transpose()*Ac);
 		for (int i = 0; i < 4; ++i)
 		{
 			for (int ii = 0; ii < 3; ++ii)
