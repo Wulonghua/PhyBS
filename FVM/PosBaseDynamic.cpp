@@ -48,7 +48,7 @@ void PosBaseDynamic::doStepStrainConstraints(Eigen::MatrixXf &pos,
 			m_pos.col(idx[3]) += d_p3;
 		}
 	}
-	vel = (m_pos - pos) *0.999/ t;
+	vel = (m_pos - pos) *0.99/ t;
 	pos = m_pos;
 }
 

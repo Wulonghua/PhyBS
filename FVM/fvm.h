@@ -14,6 +14,7 @@
 #include "IsotropicMaterial.h"
 #include "IsotropicNeohookeanMaterial.h"
 #include "PosBaseDynamic.h"
+#include "ProjDynamic.h"
 #include "CUDAInterface.h"
 
 class FVM : public QMainWindow
