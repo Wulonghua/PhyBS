@@ -44,6 +44,7 @@ private:
 	std::shared_ptr<TimeIntegration> m_integrator;
 	std::shared_ptr<IsotropicNeohookeanMaterial> m_IsoMaterial;
 	std::shared_ptr<PosBaseDynamic> m_pbd;
+	std::shared_ptr<ProjDynamic> m_projd;
 	std::shared_ptr<CUDAInterface> m_cudaInterface;
 
 	QTimer *m_idleTimer;
