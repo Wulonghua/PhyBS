@@ -23,6 +23,8 @@ FVM::FVM(QWidget *parent)
 	// initialize position based dynamics
 	m_pbd = std::make_shared<PosBaseDynamic>(m_tetMesh->getNodes(),m_tetMesh->getTetsNum());
 
+	m_projd = std::make_shared<ProjDynamic>(m_tetMesh);
+
 
 	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	//int num_tets, const int *tets, const float youngs, const float nu, const float density,
@@ -161,7 +163,9 @@ void FVM::DoOneStep()
 	}
 	else if (m_typeComputing == 2)
 	{
-
+		Eigen::MatrixXf b = m_projd->projectLocalConstraints(m_tetMesh->getMasses(), m_tetMesh->getInvMasses(), m_tetMesh->getTets(), m_integrator->getTimeStep(),
+			m_tetMesh->getNodes(), m_tetMesh->getDmInvs(), m_tetMesh->getVelocities(), m_tetMesh->computeExternalForces());
+		m_projd->solveGlobalStep(m_tetMesh->getNodes(), b);
 	}
 	else
 	{
@@ -281,4 +285,10 @@ void FVM::DoTest()
 void FVM::SetTypeComputing(int type)
 {
 	m_typeComputing = type;
+
+	if (type == 2)
+	{
+		m_projd->buildGlobalSolverMatrix(m_tetMesh->getMasses(),m_tetMesh->getTets(),
+			m_integrator->getTimeStep(),m_tetMesh->getDmInvs());
+	}
 }
