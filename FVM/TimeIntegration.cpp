@@ -66,100 +66,11 @@ void TimeIntegration::simuExplicit(	const Eigen::MatrixXf & pos,
 	}
 }
 
-void TimeIntegration::BackEuler( Eigen::MatrixXf & pos,
-								 Eigen::MatrixXf & vel,
-								 Eigen::MatrixXf & force,
-								 Eigen::MatrixXf & K)
-{
-	int n = pos.cols();
-	Eigen::MatrixXf A = m_t*m_t*K;
-	A.diagonal() += m_masses;
-	//std::cout << A << std::endl;
-	pos.resize(3*n,1);
-	vel.resize(3*n,1);
-	force.resize(3*n,1);
-	Eigen::VectorXf p = pos;
-	Eigen::VectorXf v = vel;
-	Eigen::VectorXf f = force;
-
-	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
-
-	Eigen::ConjugateGradient<Eigen::MatrixXf> cg_solver;
-	cg_solver.compute(A);
-	cg_solver.setTolerance(1e-8);
-	v = cg_solver.solve(b);
-	p += m_t * v;
-
-	pos = p.matrix();
-	vel = v.matrix();
-	pos.resize(3, n);
-	vel.resize(3 ,n);
-	force.resize(3,n);
-
-	addGroundConstraints(-2.0, pos, vel);
-}
-
 void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 	Eigen::MatrixXf & vel,
 	Eigen::MatrixXf & force,
 	Eigen::SparseMatrix<float, Eigen::RowMajor> & K)
 {
-	for (int i = 0; i < m_constraints.size(); ++i)
-	{
-		pos.col(m_constraints[i]) = Eigen::Vector3f::Zero();
-		vel.col(m_constraints[i]) = Eigen::Vector3f::Zero();
-		force.col(m_constraints[i]) = Eigen::Vector3f::Zero();
-	}
-
-	int n = pos.cols();
-	Eigen::SparseMatrix<float> A = (m_dumpingBelta+m_t)*m_t*K;
-	for (int i = 0; i < 3 * n; ++i)
-	{
-		A.coeffRef(i, i) += (1+m_t*m_dumpingAlpha)*m_masses(i);
-	}
-	//std::cout << A << std::endl;
-	pos.resize(3 * n, 1);
-	vel.resize(3 * n, 1);
-	force.resize(3 * n, 1);
-	Eigen::VectorXf p = pos;
-	Eigen::VectorXf v = vel;
-	Eigen::VectorXf f = force;
-
-	Eigen::VectorXf b = m_masses.cwiseProduct(v) + m_t * f;
-
-	Eigen::ConjugateGradient<Eigen::SparseMatrix<float>, Eigen::RowMajor> cg_solver;
-	cg_solver.compute(A);
-	cg_solver.setTolerance(1e-8);
-	v = cg_solver.solve(b);
-	p += m_t * v;
-
-	pos = p.matrix();
-	vel = v.matrix();
-	pos.resize(3, n);
-	vel.resize(3, n);
-	force.resize(3, n);
-
-	for (int i = 0; i < m_constraints.size(); ++i)
-	{
-		pos.col(m_constraints[i]) = m_rest.col(m_constraints[i]);
-	}
-	//addGroundConstraints(-1.0, pos, vel);
-}
-
-void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
-	Eigen::MatrixXf & restPos,
-	Eigen::MatrixXf & vel,
-	Eigen::MatrixXf & force,
-	Eigen::SparseMatrix<float, Eigen::RowMajor> & K)
-{
-	for (int i = 0; i < m_constraints.size(); ++i)
-	{
-			//force.col(m_constraints[i]) = Eigen::Vector3f::Zero();
-			force.col(m_constraints[i]) = 1e8 * (restPos.col(m_constraints[i]) - pos.col(m_constraints[i]));
-	}
-
-	//std::cout << "forces: " << std::endl;
-	//std::cout << force.transpose() << std::endl;
 
 	int n = pos.cols();
 

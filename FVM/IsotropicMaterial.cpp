@@ -308,7 +308,7 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats()
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 	}
-	m_tetModel->clearConstraintForces();
+	m_tetModel->addFixNodeSpringForces();
 	return m_tetModel->getForces();
 }
 
@@ -353,7 +353,7 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats(int num_Threads)
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 		omp_unset_lock(&lck);
 	}
-	m_tetModel->clearConstraintForces();
+	m_tetModel->addFixNodeSpringForces();
 	return m_tetModel->getForces();
 }
 
@@ -404,7 +404,7 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2()
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 	}
-	m_tetModel->clearConstraintForces();
+	m_tetModel->addFixNodeSpringForces();
 	return m_tetModel->getForces();
 }
 
@@ -448,7 +448,7 @@ Eigen::MatrixXf IsotropicMaterial::computeInnerForcesfromFhats2(int num_Threads)
 		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
 		omp_unset_lock(&lck);
 	}
-	m_tetModel->clearConstraintForces();
+	m_tetModel->addFixNodeSpringForces();
 	return m_tetModel->getForces();
 }
 

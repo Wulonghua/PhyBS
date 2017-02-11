@@ -19,17 +19,8 @@ public:
 		const Eigen::MatrixXf & vel,
 		const Eigen::MatrixXf & force,
 		const Eigen::VectorXf & mass);
-	void BackEuler(Eigen::MatrixXf & pos,
-		Eigen::MatrixXf & vel,
-		Eigen::MatrixXf & force,
-		Eigen::MatrixXf & K);
-	void BackEuler(Eigen::MatrixXf & pos,
-		Eigen::MatrixXf & vel,
-		Eigen::MatrixXf & force,
-		Eigen::SparseMatrix<float, Eigen::RowMajor> & K);
 
 	void BackEuler(Eigen::MatrixXf & pos,
-		Eigen::MatrixXf & restPos,
 		Eigen::MatrixXf & vel,
 		Eigen::MatrixXf & force,
 		Eigen::SparseMatrix<float, Eigen::RowMajor> & K);

@@ -151,8 +151,7 @@ void FVM::DoOneStep()
 
 		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
 
-		m_integrator->BackEuler(m_tetMesh->getNodes(), m_tetMesh->getRestPosition(),
-			m_tetMesh->getVelocities(),
+		m_integrator->BackEuler(m_tetMesh->getNodes(),m_tetMesh->getVelocities(),
 			forces, sK);
 	}
 	else if (m_typeComputing == 1)
