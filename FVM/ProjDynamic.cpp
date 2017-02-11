@@ -89,7 +89,6 @@ Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & nod
 		s.col(i) = s.col(i)*node_mass[i] / (t*t);
 	}
 	
-	Eigen::MatrixXf AcT(9, 12);
 	Eigen::Matrix3f Ds, F, DmInvT, U, R, V;
 	Eigen::Vector3f tmp;
 	Eigen::Vector4i v;  // nodes' indices
@@ -119,6 +118,7 @@ Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & nod
 		DmInvT = Dm_inverse.block<3, 3>(0, k * 3).transpose();
 		v = tets.col(k);
 		tmp = -1.0 * DmInvT.rowwise().sum();
+		Eigen::MatrixXf AcT(9, 12);
 		AcT.setZero();
 		AcT.block<3, 1>(0, 0) = AcT.block<3, 1>(3, 1)  = AcT.block<3, 1>(6, 2)  = tmp;
 		AcT.block<3, 1>(0, 3) = AcT.block<3, 1>(3, 4)  = AcT.block<3, 1>(6, 5)  = DmInvT.col(0);
