@@ -58,6 +58,7 @@ public:
 
 	void addNodesForces(Eigen::MatrixXf &forces) { m_nodes_forces += forces;}
 	void addNodeForce(int nodeID, const Eigen::Vector3f &force) { m_nodes_forces.col(nodeID) += force; }
+	void addFixNodeSpringForces();
 	void initForcesFromGravityExternals() { m_nodes_forces = m_nodes_gravity + m_nodes_external_forces; }
 	void resetExternalForce() { m_nodes_external_forces.setZero();}
 	void clearConstraintForces();

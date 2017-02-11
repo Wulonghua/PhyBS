@@ -562,10 +562,19 @@ void TetMesh::clearConstraintForces()
 	}
 }
 
+void TetMesh::addFixNodeSpringForces()
+{
+	for (int i = 0; i < m_constraintIDs.size(); ++i)
+	{
+		//force.col(m_constraints[i]) = Eigen::Vector3f::Zero();
+		m_nodes_forces.col(m_constraintIDs[i]) = 1e8 * (m_rest_positions.col(m_constraintIDs[i]) - m_nodes.col(m_constraintIDs[i]));
+	}
+}
+
 Eigen::MatrixXf TetMesh::computeExternalForces()
 {
 	initForcesFromGravityExternals();
-	clearConstraintForces();
+	addFixNodeSpringForces();
 	return m_nodes_forces;
 }
 

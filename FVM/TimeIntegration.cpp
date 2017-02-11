@@ -154,8 +154,8 @@ void TimeIntegration::BackEuler(Eigen::MatrixXf & pos,
 {
 	for (int i = 0; i < m_constraints.size(); ++i)
 	{
-			force.col(m_constraints[i]) = Eigen::Vector3f::Zero();
-			force.col(m_constraints[i]) += 1e8 * (restPos.col(m_constraints[i]) - pos.col(m_constraints[i]));
+			//force.col(m_constraints[i]) = Eigen::Vector3f::Zero();
+			force.col(m_constraints[i]) = 1e8 * (restPos.col(m_constraints[i]) - pos.col(m_constraints[i]));
 	}
 
 	//std::cout << "forces: " << std::endl;
