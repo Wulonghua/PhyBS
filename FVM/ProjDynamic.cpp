@@ -2,7 +2,7 @@
 
 
 ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh):
-m_stiffness(5000), m_iterations(50)
+m_stiffness(5000), m_iterations(10)
 {
 	n_nodes = tetMesh->getNodesNum();
 	n_tets = tetMesh->getTetsNum();
