@@ -162,9 +162,8 @@ void FVM::DoOneStep()
 	}
 	else if (m_typeComputing == 2)
 	{
-		Eigen::MatrixXf b = m_projd->projectLocalConstraints(m_tetMesh->getMasses(), m_tetMesh->getInvMasses(), m_tetMesh->getTets(), m_integrator->getTimeStep(),
-			m_tetMesh->getNodes(), m_tetMesh->getDmInvs(), m_tetMesh->getVelocities(), m_tetMesh->computeExternalForces());
-		m_projd->solveGlobalStep(m_tetMesh->getNodes(), b);
+		m_projd->doProjDynamics(m_tetMesh->getNodes(), m_tetMesh->getVelocities(),
+			m_tetMesh->getMasses(), m_tetMesh->getInvMasses(), m_tetMesh->getTets(), 0.03, m_tetMesh->getDmInvs(), m_tetMesh->computeExternalForces());
 	}
 	else
 	{

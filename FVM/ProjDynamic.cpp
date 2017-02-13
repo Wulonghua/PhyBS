@@ -2,10 +2,13 @@
 
 
 ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh):
-m_stiffness(5000)
+m_stiffness(5000), m_iterations(50)
 {
 	n_nodes = tetMesh->getNodesNum();
 	n_tets = tetMesh->getTetsNum();
+	//m_pos_new = Eigen::MatrixXf::Zero(3, n_nodes);
+	m_pos_new = tetMesh->getNodes();
+
 	m_globalSolverMat.resize(3 * n_nodes, 3 * n_nodes);
 	m_stiffWeight.resize(n_tets);
 
@@ -138,8 +141,23 @@ Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & nod
 	return s;
 }
 
-void ProjDynamic::solveGlobalStep(Eigen::MatrixXf &pos, const Eigen::VectorXf &b)
+void ProjDynamic::solveGlobalStep(Eigen::MatrixXf &pos, Eigen::VectorXf &b)
 {
-	Eigen::Map<Eigen::VectorXf> p(pos.data(), n_nodes * 3);
+	Eigen::Map<Eigen::VectorXf> p(m_pos_new.data(), n_nodes * 3);
 	p = m_pardiso_solver.solve(b);
+}
+
+void ProjDynamic::doProjDynamics(Eigen::MatrixXf &pos, Eigen::MatrixXf &vel,
+	const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
+	const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &Dm_inverse, const Eigen::MatrixXf & fext)
+{
+	m_pos_new = pos;
+	Eigen::VectorXf b;
+	for (int i = 0; i < m_iterations; ++i)
+	{
+		b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, m_pos_new, Dm_inverse, vel, fext);
+		solveGlobalStep(m_pos_new, b);
+	}
+	vel = (m_pos_new - pos) / t;
+	pos = m_pos_new;
 }
