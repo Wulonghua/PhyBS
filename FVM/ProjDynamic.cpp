@@ -2,7 +2,7 @@
 
 
 ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh):
-m_stiffness(100000), m_iterations(10)
+m_stiffness(1e5), m_iterations(10)
 {
 	n_nodes = tetMesh->getNodesNum();
 	n_tets = tetMesh->getTetsNum();
@@ -156,12 +156,18 @@ void ProjDynamic::doProjDynamics(Eigen::MatrixXf &pos, Eigen::MatrixXf &vel,
 		s.col(i) = s.col(i)*node_mass[i] / (t*t);
 	}
 
-
+	m_time.start();
+	m_elapses1 = m_elapses2 = 0;
 	for (int i = 0; i < m_iterations; ++i)
 	{
+		m_time.restart();
 		b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, s,m_pos_new, Dm_inverse, vel, fext);
+		m_elapses1 += m_time.restart();
 		solveGlobalStep(m_pos_new, b);
+		m_elapses2 += m_time.restart();
 	}
-	vel = (m_pos_new - pos) / t;
+	std::cout << "time for local step: " << m_elapses1 << std::endl;
+	std::cout << "time for global solver:" << m_elapses2 << std::endl;
+	vel = (m_pos_new - pos) / t *0.999;
 	pos = m_pos_new;
 }

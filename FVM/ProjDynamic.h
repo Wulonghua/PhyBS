@@ -5,6 +5,7 @@
 #include <Eigen/PardisoSupport>
 #include <vector>
 #include <memory>
+#include <qelapsedtimer.h>
 
 #include "TetMesh.h"
 
@@ -34,6 +35,12 @@ private:
 	int n_nodes;
 	int n_tets;
 	int m_iterations;
+
+
+	//for test
+	QElapsedTimer m_time;
+	int m_elapses1;
+	int m_elapses2;
 	
 };
 

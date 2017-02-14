@@ -57,7 +57,7 @@ private:
 	double m_ModelView[16];
 	double m_Projection[16];
 	int m_viewport[4];
-	Eigen::Map<Eigen::Matrix<double,4,4>> m_matModelView;
+	Eigen::Map<Eigen::Matrix<double, 4, 4>> m_matModelView;
 	Eigen::Map<Eigen::Matrix<double, 4, 4>> m_matProjection;
 	//Eigen::Matrix4d m_matModelViewInverse;
 	//Eigen::Matrix4d m_matProjectionInverse;
