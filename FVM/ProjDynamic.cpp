@@ -2,7 +2,7 @@
 
 
 ProjDynamic::ProjDynamic(std::shared_ptr<TetMesh> tetMesh):
-m_stiffness(5000), m_iterations(10)
+m_stiffness(100000), m_iterations(10)
 {
 	n_nodes = tetMesh->getNodesNum();
 	n_tets = tetMesh->getTetsNum();
@@ -76,21 +76,10 @@ void ProjDynamic::buildGlobalSolverMatrix(const Eigen::VectorXf &node_mass, cons
 }
 
 Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
-													 const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
+													 const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s, 
+													 const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
 													 const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext)
 {
-	Eigen::MatrixXf s = Eigen::MatrixXf::Zero(3, n_nodes);
-	for (int i = 0; i < n_nodes; ++i)
-	{
-		s.col(i) = t*t * node_inv_mass[i] * fext.col(i);
-	}
-
-	s = pos + t * vel + s;
-
-	for (int i = 0; i < n_nodes; ++i)
-	{
-		s.col(i) = s.col(i)*node_mass[i] / (t*t);
-	}
 	
 	Eigen::Matrix3f Ds, F, DmInvT, U, R, V;
 	Eigen::Vector3f tmp;
@@ -153,9 +142,24 @@ void ProjDynamic::doProjDynamics(Eigen::MatrixXf &pos, Eigen::MatrixXf &vel,
 {
 	m_pos_new = pos;
 	Eigen::VectorXf b;
+
+	Eigen::MatrixXf s = Eigen::MatrixXf::Zero(3, n_nodes);
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		s.col(i) = t*t * node_inv_mass[i] * fext.col(i);
+	}
+
+	s = pos + t * vel + s;
+
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		s.col(i) = s.col(i)*node_mass[i] / (t*t);
+	}
+
+
 	for (int i = 0; i < m_iterations; ++i)
 	{
-		b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, m_pos_new, Dm_inverse, vel, fext);
+		b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, s,m_pos_new, Dm_inverse, vel, fext);
 		solveGlobalStep(m_pos_new, b);
 	}
 	vel = (m_pos_new - pos) / t;

@@ -21,7 +21,7 @@ public:
 private:
 
 	Eigen::VectorXf projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
-		const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
+		const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
 		const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext);
 	void solveGlobalStep(Eigen::MatrixXf &pos, Eigen::VectorXf &b);
 
