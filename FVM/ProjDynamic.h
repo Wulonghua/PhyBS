@@ -24,6 +24,9 @@ private:
 	Eigen::VectorXf projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
 		const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
 		const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext);
+	Eigen::VectorXf projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
+		const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
+		const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext, int num_threads);
 	void solveGlobalStep(Eigen::MatrixXf &pos, Eigen::VectorXf &b);
 
 	Eigen::SparseMatrix<float, Eigen::RowMajor> m_globalSolverMat;
