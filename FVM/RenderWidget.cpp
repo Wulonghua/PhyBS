@@ -4,7 +4,7 @@
 #endif
 
 RenderWidget::RenderWidget(QWidget *parent) :
-m_fps(0), m_elapses(0), m_iter(0), m_iterMax(10), m_picked(false),
+m_fps(0), m_elapses(0), m_iter(0), m_iterMax(20), m_picked(false),
 m_matModelView(m_ModelView), m_matProjection(m_Projection)
 {
 

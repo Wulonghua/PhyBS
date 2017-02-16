@@ -8,18 +8,42 @@ m_stiffness(1e6), m_iterations(5)
 	n_tets = tetMesh->getTetsNum();
 	//m_pos_new = Eigen::MatrixXf::Zero(3, n_nodes);
 	m_pos_new = tetMesh->getNodes();
-
 	m_globalSolverMat.resize(3 * n_nodes, 3 * n_nodes);
 	m_stiffWeight.resize(n_tets);
 
 	for (int i = 0; i < n_tets; ++i)
 		m_stiffWeight[i] = m_stiffness * tetMesh->getTetVolumes()[i];
+
+	initLocalProjection(tetMesh->getTets());
 }
 
 
 ProjDynamic::~ProjDynamic()
 {
 }
+
+void ProjDynamic::initLocalProjection(const Eigen::MatrixXi & tets)
+{
+
+	m_localProjections = Eigen::MatrixXf::Zero(12, n_tets);
+	m_proj_idx.resize(n_nodes);
+	
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		m_proj_idx[i].reserve(4);
+	}
+
+	for (int i = 0; i < n_tets; ++i)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			m_proj_idx[tets(j, i)].push_back(i * 12 + j * 3);
+		}
+	}
+
+	std::cout << "Projective Dynamics initialized." << std::endl;
+}
+
 
 void ProjDynamic::buildGlobalSolverMatrix(const Eigen::VectorXf &node_mass, const Eigen::MatrixXi &tets, float t, const Eigen::MatrixXf &Dm_inverse)
 {
@@ -169,6 +193,87 @@ Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & nod
 	return s;
 }
 
+Eigen::VectorXf ProjDynamic::projectLocalConstraints2(const Eigen::VectorXf &node_mass, const Eigen::VectorXf &node_inv_mass,
+													  const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s,
+													  const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
+													  const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext)
+{
+
+	Eigen::Matrix3f Ds, F, U, R, V, DmInv, DmInvT;
+	//Eigen::Vector3f tmp;
+	float tmp0, tmp1, tmp2;
+	Eigen::Vector4i v;  // nodes' indices
+	Eigen::VectorXf Rv, c;
+	Rv.resize(9);
+	c.resize(12);
+
+	for (int k = 0; k < n_tets; ++k)
+	{
+
+		Ds.col(0) = pos.col(tets(1, k)) - pos.col(tets(0, k));
+		Ds.col(1) = pos.col(tets(2, k)) - pos.col(tets(0, k));
+		Ds.col(2) = pos.col(tets(3, k)) - pos.col(tets(0, k));
+		DmInv = Dm_inverse.block<3, 3>(0, 3 * k);
+		F = Ds * DmInv;
+		Eigen::JacobiSVD<Eigen::Matrix3f> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+		U = svd.matrixU();
+		V = svd.matrixV();
+		if (U.determinant() < 0)
+			U.col(0) = -U.col(0);
+		if (V.determinant() < 0)
+			V.col(0) = -V.col(0);
+
+		R = U * V.transpose();
+
+
+		Rv(0) = R(0, 0); Rv(1) = R(0, 1); Rv(2) = R(0, 2);
+		Rv(3) = R(1, 0); Rv(4) = R(1, 1); Rv(5) = R(1, 2);
+		Rv(6) = R(2, 0); Rv(7) = R(2, 1); Rv(8) = R(2, 2);
+
+		v = tets.col(k);
+
+		tmp0 = -DmInv(0, 0) - DmInv(1, 0) - DmInv(2, 0);
+		tmp1 = -DmInv(0, 1) - DmInv(1, 1) - DmInv(2, 1);
+		tmp2 = -DmInv(0, 2) - DmInv(1, 2) - DmInv(2, 2);
+
+		c[0] = tmp0 * Rv[0] + tmp1 * Rv[1] + tmp2 * Rv[2];
+		c[1] = tmp0 * Rv[3] + tmp1 * Rv[4] + tmp2 * Rv[5];
+		c[2] = tmp0 * Rv[6] + tmp1 * Rv[7] + tmp2 * Rv[8];
+		c[3] = DmInv(0, 0) * Rv[0] + DmInv(0, 1) * Rv[1] + DmInv(0, 2) * Rv[2];
+		c[4] = DmInv(0, 0) * Rv[3] + DmInv(0, 1) * Rv[4] + DmInv(0, 2) * Rv[5];
+		c[5] = DmInv(0, 0) * Rv[6] + DmInv(0, 1) * Rv[7] + DmInv(0, 2) * Rv[8];
+		c[6] = DmInv(1, 0) * Rv[0] + DmInv(1, 1) * Rv[1] + DmInv(1, 2) * Rv[2];
+		c[7] = DmInv(1, 0) * Rv[3] + DmInv(1, 1) * Rv[4] + DmInv(1, 2) * Rv[5];
+		c[8] = DmInv(1, 0) * Rv[6] + DmInv(1, 1) * Rv[7] + DmInv(1, 2) * Rv[8];
+		c[9] = DmInv(2, 0) * Rv[0] + DmInv(2, 1) * Rv[1] + DmInv(2, 2) * Rv[2];
+		c[10] = DmInv(2, 0) * Rv[3] + DmInv(2, 1) * Rv[4] + DmInv(2, 2) * Rv[5];
+		c[11] = DmInv(2, 0) * Rv[6] + DmInv(2, 1) * Rv[7] + DmInv(2, 2) * Rv[8];
+
+		c = c*m_stiffWeight[k];
+		
+		m_localProjections.col(k) = c;
+	}
+
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	s.col(v(i)) += c.block<3, 1>(i * 3, 0);
+	//}
+	Eigen::Map<Eigen::VectorXf> proj(m_localProjections.data(), n_tets * 12);
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		int n = m_proj_idx[i].size();
+		for (int j = 0; j < n; ++j)
+		{
+			s(0, i) += proj[m_proj_idx[i][j]];
+			s(1, i) += proj[m_proj_idx[i][j] + 1];
+			s(2, i) += proj[m_proj_idx[i][j] + 2];
+		}
+	}
+
+	s.resize(3 * n_nodes, 1);
+	return s;
+}
+
 Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
 	const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s,
 	const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
@@ -243,6 +348,90 @@ Eigen::VectorXf ProjDynamic::projectLocalConstraints(const Eigen::VectorXf & nod
 	return s;
 }
 
+Eigen::VectorXf ProjDynamic::projectLocalConstraints2(const Eigen::VectorXf & node_mass, const Eigen::VectorXf &node_inv_mass,
+	const Eigen::MatrixXi &tets, float t, Eigen::MatrixXf s, const Eigen::MatrixXf &pos, const Eigen::MatrixXf &Dm_inverse,
+	const Eigen::MatrixXf &vel, const Eigen::MatrixXf & fext, int num_threads)
+{
+
+	omp_set_num_threads(num_threads);
+#pragma omp parallel for
+	for (int k = 0; k < n_tets; ++k)
+	{
+		Eigen::Matrix3f Ds, F, U, R, V, DmInv;
+		//Eigen::Vector3f tmp;
+		float tmp0, tmp1, tmp2;
+		Eigen::Vector4i v;  // nodes' indices
+		Eigen::VectorXf Rv, c;
+		Rv.resize(9);
+		c.resize(12);
+
+		Ds.col(0) = pos.col(tets(1, k)) - pos.col(tets(0, k));
+		Ds.col(1) = pos.col(tets(2, k)) - pos.col(tets(0, k));
+		Ds.col(2) = pos.col(tets(3, k)) - pos.col(tets(0, k));
+		DmInv = Dm_inverse.block<3, 3>(0, 3 * k);
+		F = Ds * DmInv;
+		Eigen::JacobiSVD<Eigen::Matrix3f> svd(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+		U = svd.matrixU();
+		V = svd.matrixV();
+		if (U.determinant() < 0)
+			U.col(0) = -U.col(0);
+		if (V.determinant() < 0)
+			V.col(0) = -V.col(0);
+
+		R = U * V.transpose();
+
+
+		Rv(0) = R(0, 0); Rv(1) = R(0, 1); Rv(2) = R(0, 2);
+		Rv(3) = R(1, 0); Rv(4) = R(1, 1); Rv(5) = R(1, 2);
+		Rv(6) = R(2, 0); Rv(7) = R(2, 1); Rv(8) = R(2, 2);
+
+		v = tets.col(k);
+
+		tmp0 = -DmInv(0, 0) - DmInv(1, 0) - DmInv(2, 0);
+		tmp1 = -DmInv(0, 1) - DmInv(1, 1) - DmInv(2, 1);
+		tmp2 = -DmInv(0, 2) - DmInv(1, 2) - DmInv(2, 2);
+
+		c[0] = tmp0 * Rv[0] + tmp1 * Rv[1] + tmp2 * Rv[2];
+		c[1] = tmp0 * Rv[3] + tmp1 * Rv[4] + tmp2 * Rv[5];
+		c[2] = tmp0 * Rv[6] + tmp1 * Rv[7] + tmp2 * Rv[8];
+		c[3] = DmInv(0, 0) * Rv[0] + DmInv(0, 1) * Rv[1] + DmInv(0, 2) * Rv[2];
+		c[4] = DmInv(0, 0) * Rv[3] + DmInv(0, 1) * Rv[4] + DmInv(0, 2) * Rv[5];
+		c[5] = DmInv(0, 0) * Rv[6] + DmInv(0, 1) * Rv[7] + DmInv(0, 2) * Rv[8];
+		c[6] = DmInv(1, 0) * Rv[0] + DmInv(1, 1) * Rv[1] + DmInv(1, 2) * Rv[2];
+		c[7] = DmInv(1, 0) * Rv[3] + DmInv(1, 1) * Rv[4] + DmInv(1, 2) * Rv[5];
+		c[8] = DmInv(1, 0) * Rv[6] + DmInv(1, 1) * Rv[7] + DmInv(1, 2) * Rv[8];
+		c[9] = DmInv(2, 0) * Rv[0] + DmInv(2, 1) * Rv[1] + DmInv(2, 2) * Rv[2];
+		c[10] = DmInv(2, 0) * Rv[3] + DmInv(2, 1) * Rv[4] + DmInv(2, 2) * Rv[5];
+		c[11] = DmInv(2, 0) * Rv[6] + DmInv(2, 1) * Rv[7] + DmInv(2, 2) * Rv[8];
+
+		c = c*m_stiffWeight[k];
+
+		m_localProjections.col(k) = c;
+	}
+
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	s.col(v(i)) += c.block<3, 1>(i * 3, 0);
+	//}
+	Eigen::Map<Eigen::VectorXf> proj(m_localProjections.data(), n_tets * 12);
+	
+	omp_set_num_threads(num_threads);
+#pragma omp parallel for
+	for (int i = 0; i < n_nodes; ++i)
+	{
+		int n = m_proj_idx[i].size();
+		for (int j = 0; j < n; ++j)
+		{
+			s(0, i) += proj[m_proj_idx[i][j]];
+			s(1, i) += proj[m_proj_idx[i][j] + 1];
+			s(2, i) += proj[m_proj_idx[i][j] + 2];
+		}
+	}
+
+	s.resize(3 * n_nodes, 1);
+	return s;
+}
+
 
 void ProjDynamic::solveGlobalStep(Eigen::MatrixXf &pos, Eigen::VectorXf &b)
 {
@@ -275,7 +464,9 @@ void ProjDynamic::doProjDynamics(Eigen::MatrixXf &pos, Eigen::MatrixXf &vel,
 	for (int i = 0; i < m_iterations; ++i)
 	{
 		//m_time.restart();
-		b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, s,m_pos_new, Dm_inverse, vel, fext,4);
+		//b = projectLocalConstraints(node_mass, node_inv_mass, tets, t, s,m_pos_new, Dm_inverse, vel, fext,4);
+
+		b = projectLocalConstraints2(node_mass, node_inv_mass, tets, t, s, m_pos_new, Dm_inverse, vel, fext, 4);
 		//m_elapses1 += m_time.restart();
 		solveGlobalStep(m_pos_new, b);
 		//m_elapses2 += m_time.restart();
@@ -284,6 +475,6 @@ void ProjDynamic::doProjDynamics(Eigen::MatrixXf &pos, Eigen::MatrixXf &vel,
 	//std::cout << "time : " << m_elapses1 << std::endl;
 	//std::cout << "time for local AcT:" << m_elapses2 << std::endl;
 	m_time.invalidate();
-	vel = (m_pos_new - pos) / t *0.999;
+	vel = (m_pos_new - pos) / t *0.99;
 	pos = m_pos_new;
 }
