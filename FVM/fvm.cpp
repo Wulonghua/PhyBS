@@ -9,6 +9,7 @@ FVM::FVM(QWidget *parent)
 	m_comboboxType->addItem(QStringLiteral("CPU_force"));
 	m_comboboxType->addItem(QStringLiteral("CPU_PBD"));
 	m_comboboxType->addItem(QStringLiteral("CPU_ProjDynamic"));
+	m_comboboxType->addItem(QStringLiteral("CPU_DescentOptimize"));
 	m_comboboxType->addItem(QStringLiteral("GPU_force"));
 	ui.mainToolBar->addWidget(m_comboboxType);
 
@@ -164,6 +165,11 @@ void FVM::DoOneStep()
 	{
 		m_projd->doProjDynamics(m_tetMesh->getNodes(), m_tetMesh->getVelocities(),
 			m_tetMesh->getMasses(), m_tetMesh->getInvMasses(), m_tetMesh->getTets(), 0.03, m_tetMesh->getDmInvs(), m_tetMesh->computeExternalForces());
+	}
+	else if (m_typeComputing == 3)
+	{
+
+
 	}
 	else
 	{

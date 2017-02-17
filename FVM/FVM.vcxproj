@@ -155,6 +155,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DescentOptimize.cpp" />
     <ClCompile Include="fvm.cpp" />
     <ClCompile Include="GeneratedFiles\Debug\moc_fvm.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -227,6 +228,7 @@
   <ItemGroup>
     <ClInclude Include="CUDAInterface.h" />
     <ClInclude Include="CUDALinearSolvers.h" />
+    <ClInclude Include="DescentOptimize.h" />
     <ClInclude Include="GeneratedFiles\ui_fvm.h" />
     <ClInclude Include="GlobalHelpers.h" />
     <ClInclude Include="IsotropicMaterial.h" />
