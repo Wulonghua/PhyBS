@@ -30,7 +30,7 @@ public:
 	virtual void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)=0;
 	virtual void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)=0;
 	virtual Eigen::MatrixXf computeInnerForceFromPos(const Eigen::MatrixXf & pos)=0;
-	virtual float computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)=0;
+	virtual void computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)=0;
 
 	//Teran's method
 	Eigen::MatrixXf computeInnerForcesfromFhats();
@@ -59,6 +59,7 @@ public:
 	Eigen::MatrixXf & getFhats() { return m_Fhats; }
 	Eigen::MatrixXf & getUs() { return m_Us; }
 	Eigen::MatrixXf & getVs() { return m_Vs; }
+	Eigen::VectorXf & getElasticEnergys() { return m_elasticEnergys; }
 
 	const float m_eps_singularvalue;
 
@@ -87,7 +88,7 @@ protected:
 	Eigen::MatrixXf m_Us;
 	Eigen::MatrixXf m_Vs;
 	Eigen::MatrixXf m_Invariants;
-	Eigen::MatrixXf m_elasticEnergys;
+	Eigen::VectorXf m_elasticEnergys;
 
 private:
 	//see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.

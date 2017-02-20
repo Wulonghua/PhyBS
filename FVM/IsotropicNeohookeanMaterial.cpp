@@ -113,7 +113,7 @@ Eigen::MatrixXf IsotropicNeohookeanMaterial::computeInnerForceFromPos(const Eige
 	return m_tetModel->getForces();
 }
 
-float IsotropicNeohookeanMaterial::computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)
+void IsotropicNeohookeanMaterial::computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)
 {
 	Eigen::Matrix3f F;
 	float I1, logJ;

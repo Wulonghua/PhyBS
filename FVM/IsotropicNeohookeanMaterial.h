@@ -17,7 +17,7 @@ public:
 	virtual void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient);
 	virtual void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian);
 	virtual Eigen::MatrixXf computeInnerForceFromPos(const Eigen::MatrixXf & pos);
-	virtual float computeElasticEnergyFromPos(const Eigen::MatrixXf & pos);
+	virtual void computeElasticEnergyFromPos(const Eigen::MatrixXf & pos);
 
 protected:
 

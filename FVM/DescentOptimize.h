@@ -20,8 +20,13 @@ public:
 private:
 	Eigen::MatrixXf computeGradient();
 	void initialization();
+	float computeTotalEnergy(const Eigen::MatrixXf &pos);
+
+	Eigen::MatrixXf m_posk_next;
 	Eigen::MatrixXf m_posk;
 	Eigen::MatrixXf m_posk_last;
+	Eigen::MatrixXf m_pos;
+	Eigen::MatrixXf m_posk_old;
 	//Eigen::MatrixXf m_pos0;
 	//Eigen::MatrixXf m_pos1;
 
@@ -38,6 +43,12 @@ private:
 	int m_iterations;
 
 	float m_alpha;
+
+	float m_energy;
+	float m_energy_old;
+
+	float m_rho;
+	float m_omega;
 
 };
 
