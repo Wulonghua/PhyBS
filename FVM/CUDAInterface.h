@@ -29,6 +29,8 @@ public:
 	void updateNodePositions(const float *hostNode);
 	void reset();
 
+	void computeForceKdiagonal();
+
 private:
 	  int n_nodes;
 	  int n_tets;
@@ -47,6 +49,7 @@ private:
 	  float *d_Fhats;
 	  float *d_Us;
 	  float *d_Vs;
+	  float *d_Hd;				// Hessian diagonal
 
 	  // first stroe for global stiffness matrix then for LHS of the linear system.
 	  // if jacobi iterative method is used, then store for the C matrix Part (see [Wang 2015]) 
@@ -65,6 +68,6 @@ private:
 	  float m_dumpingBelta;
 	  float m_timestep;
 
-
+	  
 	  CUDALinearSolvers * cuLinearSolver;
 };

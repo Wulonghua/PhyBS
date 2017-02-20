@@ -96,7 +96,6 @@ void computeDPDFij(float *U, float *Fhats, float *V, float *PFhats, float *hessi
 	{
 		dPdFij[k] = dPdFij1[k] + dPdFij2[k] + dPdFij3[k];
 	}
-
 }
 
 
@@ -220,6 +219,19 @@ void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, flo
 	}
 }
 
+__host__ __device__ void computeFirstPiolaStress(float *F, float mu, float lambda, float *P)
+{
+	float F_invT[9];
+	cuMath::Matrix_Inverse_Transpose_3(F, F_invT);
+
+	float F_determinant = cuMath::Matrix_Determinant_3(F);
+
+	for (int i = 0; i < 9; ++i)
+	{
+		P[i] = (F[i] - F_invT[i]) * mu + lambda * log(F_determinant) * F_invT[i];
+	}
+}
+
 __global__ void computeGlobalK(float *Us, float *Fhats, float *Vs, int *tets, int num_tets, float *ANs, float *Dm_invs, float *mus, float *lambdas, int *kIDinCSRval, float *gK)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -328,6 +340,70 @@ __global__ void addFixContraintsAndGravity(float *nodes, float *rest, float *gra
 		inner_forces[3 * i + 1] += gravity[i];
 	}
 
+}
+
+__global__ void computeForceKd(float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *Kd, float *inner_forces, bool computeHd)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_tets)	return;
+	
+	// compute Ds
+	float *pos0 = nodes + 3 * tets[i * 4 + 0];
+	float *pos1 = nodes + 3 * tets[i * 4 + 1];
+	float *pos2 = nodes + 3 * tets[i * 4 + 2];
+	float *pos3 = nodes + 3 * tets[i * 4 + 3];
+
+	float Ds[9];
+	for (int k = 0; k < 3; ++k)
+	{
+		Ds[0 + k * 3] = *(pos1 + k) - *(pos0 + k);
+		Ds[1 + k * 3] = *(pos2 + k) - *(pos0 + k);
+		Ds[2 + k * 3] = *(pos3 + k) - *(pos0 + k);
+	}
+	
+	// compute deformation gradient
+	float F[9],P[9],forces[9];
+	cuMath::Matrix_Product_3(Ds, Dm_invs + 9 * i, F);
+	computeFirstPiolaStress(F, mus[i], lambdas[i], P);
+
+	cuMath::Matrix_Product_3(P, ANs + 9 * i, forces);
+
+	float *f0 = inner_forces + 3 * tets[i * 4 + 0];
+	float *f1 = inner_forces + 3 * tets[i * 4 + 1];
+	float *f2 = inner_forces + 3 * tets[i * 4 + 2];
+	float *f3 = inner_forces + 3 * tets[i * 4 + 3];
+
+	atomicAdd(f0,     -forces[0] - forces[1] - forces[2]);
+	atomicAdd(f0 + 1, -forces[3] - forces[4] - forces[5]);
+	atomicAdd(f0 + 2, -forces[6] - forces[7] - forces[8]);
+
+	atomicAdd(f1, forces[0]);
+	atomicAdd(f1 + 1, forces[3]);
+	atomicAdd(f1 + 2, forces[6]);
+
+	atomicAdd(f2, forces[1]);
+	atomicAdd(f2 + 1, forces[4]);
+	atomicAdd(f2 + 2, forces[7]);
+
+	atomicAdd(f3, forces[2]);
+	atomicAdd(f3 + 1, forces[5]);
+	atomicAdd(f3 + 2, forces[8]);
+
+	if (!computeHd) return;
+	float Fhat[9], U[9], V[9];
+	cuMath::Matrix_SVD_3(F, U, Fhat, V);
+
+	float dfdx[144];
+	compute_dfdx(U, Fhat, V, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
+
+	for (int n = 0; n < 4; ++n)
+	{
+		for (int m = 0; m < 3; ++m)
+		{
+			int k = n * 3 + m;
+			atomicAdd(Kd + tets[i * 4 + n] * 3 + m, -dfdx[k * 12 + k]);
+		}
+	}
 }
 
 __global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
@@ -504,6 +580,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&csrMat.d_diagonalIdx, sizeof(int)*n_nodes * 3);
 	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
 	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
+	cudaMalloc((void **)&d_Hd, sizeof(float) * n_nodes * 3);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
@@ -568,6 +645,7 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_gravities);
 	cudaFree(d_masses_scaled);
 	cudaFree(d_b);
+	cudaFree(d_Hd);
 }
 
 void CUDAInterface::updateNodePositions(const float *hostnodes)
@@ -681,4 +759,10 @@ void CUDAInterface::doBackEuler(float *hostNode)
 
 	cudaMemcpy(hostNode, d_nodes, sizeof(float)*n_nodes * 3, cudaMemcpyDeviceToHost);
 	cudaDeviceSynchronize();
+}
+
+void CUDAInterface::computeForceKdiagonal()
+{
+
+
 }
