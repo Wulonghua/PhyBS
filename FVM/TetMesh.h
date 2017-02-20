@@ -28,6 +28,7 @@ public:
 	// using the simplest linear isotropic model
 	void computeForces();
 	Eigen::Matrix3f computeDeformationGradient(int tetID);
+	Eigen::Matrix3f computeDeformationGradient(int tetID, const Eigen::MatrixXf & nodes);
 
 	Eigen::MatrixXf computeExternalForces();
 

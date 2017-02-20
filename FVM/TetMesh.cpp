@@ -35,16 +35,16 @@ void TetMesh::initNodesFromFile(QString filename)
 		{
 			fin >> prefix >> m_rest_positions(0, i) >> m_rest_positions(1, i) >> m_rest_positions(2, i);
 
-			//if (m_rest_positions(0, i) == -2.5)
-			//	m_constraintIDs.push_back(i);
+			if (m_rest_positions(0, i) == -2.5)
+				m_constraintIDs.push_back(i);
 
 			//if (m_rest_positions(1, i) > 0.16)
 			//	m_constraintIDs.push_back(i);
 
-			if (m_rest_positions(1, i) < -1.8)
-				m_constraintIDs.push_back(i);
+			//if (m_rest_positions(1, i) < -1.8)
+			//	m_constraintIDs.push_back(i);
 		}
-		//m_constraintIDs.push_back(0);
+		m_constraintIDs.push_back(0);
 		m_nodes = m_rest_positions;
 
 
@@ -159,17 +159,17 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\tet2\\tet.2.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\tet2\\tet.2.face"));
 
-	//initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
-	//initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
-	//initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
+	initNodesFromFile(QStringLiteral("..\\model\\bar\\bar.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\bar\\bar.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\bar\\bar.1.face"));
 
 	//initNodesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.node"));
 	//initTetsFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.face"));
 
-	initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
-	initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
-	initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXf::Zero(3, n_tets * 3);
@@ -292,16 +292,19 @@ Eigen::Matrix3f TetMesh::computeDeformationGradient(int i) // i is tet's index
 	Ds.col(2) = m_nodes.col(m_tets(3, i)) - m_nodes.col(m_tets(0, i));
 
 	tmp = Ds * m_Dm_inverses.block<3, 3>(0, 3 * i);
-
-	//for (int k = 0; k < 3; ++k)
-	//{
-	//	for (int j = 0; j < 3; ++j)
-	//	{
-	//		tmp(k, j) = fixPrecision(tmp(k, j));
-	//	}
-	//}
-
 	return tmp;
+}
+
+Eigen::Matrix3f TetMesh::computeDeformationGradient(int i, const Eigen::MatrixXf & nodes)
+{
+	Eigen::Matrix3f Ds, tmp;
+	Ds.col(0) = nodes.col(m_tets(1, i)) - nodes.col(m_tets(0, i));
+	Ds.col(1) = nodes.col(m_tets(2, i)) - nodes.col(m_tets(0, i));
+	Ds.col(2) = nodes.col(m_tets(3, i)) - nodes.col(m_tets(0, i));
+
+	tmp = Ds * m_Dm_inverses.block<3, 3>(0, 3 * i);
+	return tmp;
+
 }
 
 

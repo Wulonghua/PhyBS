@@ -6,6 +6,7 @@ IsotropicNeohookeanMaterial::IsotropicNeohookeanMaterial(std::shared_ptr<TetMesh
 	int n_tets = tetMesh->getTetsNum();
 	m_mus.resize(n_tets);
 	m_lambdas.resize(n_tets);
+	m_elasticEnergys.resize(n_tets);
 	m_Fhats = Eigen::MatrixXf::Zero(3, n_tets);
 	m_Us = Eigen::MatrixXf::Zero(3, 3 * n_tets);
 	m_Vs = Eigen::MatrixXf::Zero(3, 3 * n_tets);
@@ -89,5 +90,41 @@ void IsotropicNeohookeanMaterial::computeEnergy2FhatHessian(int tetID, const flo
 	hessian[5] = hessian[7] = (tmp1 + tmp2) * inv_lambda2 * inv_lambda3;
 }
 
+Eigen::MatrixXf IsotropicNeohookeanMaterial::computeInnerForceFromPos(const Eigen::MatrixXf & pos)
+{
+	Eigen::Matrix3f F,F_invT,P,forces;
+	int n_tets = m_tetModel->getTetsNum();
+
+	m_tetModel->initForcesFromGravityExternals();
+	for (int i = 0; i < n_tets; ++i)
+	{
+		F = m_tetModel->computeDeformationGradient(i, pos);
+		F_invT = F.inverse().transpose();
+
+		P = (F - F_invT)*m_mus[i] + m_lambdas[i] * std::log(F.determinant())*F_invT;
+		forces = P * m_tetModel->getAN(i);
+
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 1), forces.col(0));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 2), forces.col(1));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 3), forces.col(2));
+		m_tetModel->addNodeForce(m_tetModel->getNodeGlobalIDinTet(i, 0), -(forces.rowwise().sum()));
+	}
+	m_tetModel->addFixNodeSpringForces();
+	return m_tetModel->getForces();
+}
+
+float IsotropicNeohookeanMaterial::computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)
+{
+	Eigen::Matrix3f F;
+	float I1, logJ;
+	int n_tets = m_tetModel->getTetsNum();
+	for (int i = 0; i < n_tets; ++i)
+	{
+		F = m_tetModel->computeDeformationGradient(i, pos);
+		I1 = F.squaredNorm();
+		logJ = std::log(F.determinant());
+		m_elasticEnergys[i] = 0.5 * m_mus[i] * (I1 - 3) - m_mus[i] * logJ + 0.5 * m_lambdas[i] * logJ * logJ;
+	}
+}
 
 

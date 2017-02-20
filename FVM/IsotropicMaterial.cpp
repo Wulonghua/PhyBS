@@ -500,6 +500,57 @@ Eigen::MatrixXf IsotropicMaterial::computeStiffnessMatrix(int tetID)
 	return -dfdx;
 }
 
+Eigen::MatrixXf IsotropicMaterial::computeStiffnessMatrixFromPos(int tetID, const Eigen::MatrixXf &pos)
+{
+	// Teran's method
+	//Eigen::MatrixXf dPdF = computeDP2DF(tetID); // 9*9
+
+	// Barbic's method
+	float dPdF_buf[81] = { 0.0 }; //a raw array of float
+	Eigen::Map<Eigen::Matrix<float, 9, 9>> dPdF(dPdF_buf);
+	Eigen::Matrix3f U;// = m_Us.block<3, 3>(0, tetID * 3);
+	Eigen::Matrix3f V;// = m_Vs.block<3, 3>(0, tetID * 3);
+	Eigen::Vector3f Fhats;// = m_Fhats.col(tetID);
+
+	Eigen::Matrix3f F = m_tetModel->computeDeformationGradient(tetID,pos);
+
+	computeSVD33modified(F, Fhats, U, V);
+	computeDP2DF(tetID, U.transpose().data(), Fhats.data(), V.transpose().data(), dPdF_buf);
+
+	Eigen::Matrix3f BT = m_tetModel->getAN(tetID).transpose();
+	Eigen::MatrixXf dGdF(9, 9);
+	dGdF.block<3, 9>(0, 0) = BT * dPdF.block<3, 9>(0, 0);
+	dGdF.block<3, 9>(3, 0) = BT * dPdF.block<3, 9>(3, 0);
+	dGdF.block<3, 9>(6, 0) = BT * dPdF.block<3, 9>(6, 0);
+
+	Eigen::Matrix3f DmInvT = m_tetModel->getDmInv(tetID).transpose();
+	Eigen::Vector3f v = -1.0 * DmInvT.rowwise().sum();
+
+	Eigen::MatrixXf dFdx = Eigen::MatrixXf::Zero(9, 12);
+	dFdx.block<3, 1>(0, 0) = dFdx.block<3, 1>(3, 1) = dFdx.block<3, 1>(6, 2) = v;
+	dFdx.block<3, 1>(0, 3) = dFdx.block<3, 1>(3, 4) = dFdx.block<3, 1>(6, 5) = DmInvT.col(0);
+	dFdx.block<3, 1>(0, 6) = dFdx.block<3, 1>(3, 7) = dFdx.block<3, 1>(6, 8) = DmInvT.col(1);
+	dFdx.block<3, 1>(0, 9) = dFdx.block<3, 1>(3, 10) = dFdx.block<3, 1>(6, 11) = DmInvT.col(2);
+
+	Eigen::MatrixXf dGdx = dGdF * dFdx;
+
+	Eigen::MatrixXf dfdx = Eigen::MatrixXf::Zero(12, 12);
+
+	dfdx.row(0) = -dGdx.row(0) - dGdx.row(1) - dGdx.row(2);
+	dfdx.row(1) = -dGdx.row(3) - dGdx.row(4) - dGdx.row(5);
+	dfdx.row(2) = -dGdx.row(6) - dGdx.row(7) - dGdx.row(8);
+
+	int convert_idx[9] = { 0, 3, 6, 1, 4, 7, 2, 5, 8 };
+	for (int i = 0; i < 9; ++i)
+	{
+		dfdx.row(i + 3) = dGdx.row(convert_idx[i]);
+	}
+
+	// test
+	//m_tetModel->writeMatrix("mat.csv", dfdx);
+	return -dfdx;
+}
+
 void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 {
 	int n = m_tetModel->getNodesNum();
@@ -564,6 +615,44 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	}
 	//for (int i = 0; i < 96; ++i)
 	//	std::cout << m_kIDinCSRval[i] << " ";
+}
+
+Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrixFromPos(const Eigen::MatrixXf & pos)
+{
+	int n = m_tetModel->getNodesNum();
+	int m = m_tetModel->getTetsNum();
+
+	Eigen::SparseMatrix<float, Eigen::RowMajor> gK = m_globalK;
+	Eigen::MatrixXf K;
+	int Ki, Kj, gKi, gKj;
+
+	for (int i = 0; i < m; ++i)
+	{
+
+		K = computeStiffnessMatrixFromPos(i,pos);
+
+
+		for (int fi = 0; fi < 4; ++fi)
+		{
+			for (int fj = 0; fj < 3; ++fj)
+			{
+				Ki = fi * 3 + fj;
+				gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+				for (int ni = 0; ni < 4; ++ni)
+				{
+					for (int nj = 0; nj < 3; ++nj)
+					{
+						Kj = ni * 3 + nj;
+						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
+						gK.coeffRef(gKi, gKj) += K(Ki, Kj) - 1;
+					}
+				}
+			}
+		}
+
+	}
+
+	return gK;
 }
 
 Eigen::SparseMatrix<float, Eigen::RowMajor> IsotropicMaterial::computeGlobalStiffnessMatrix()

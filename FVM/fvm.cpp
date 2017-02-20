@@ -26,6 +26,7 @@ FVM::FVM(QWidget *parent)
 
 	m_projd = std::make_shared<ProjDynamic>(m_tetMesh);
 
+	m_descentOpt = std::make_shared<DescentOptimize>(m_tetMesh,m_IsoMaterial);
 
 	//int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	//int num_tets, const int *tets, const float youngs, const float nu, const float density,
@@ -169,7 +170,7 @@ void FVM::DoOneStep()
 	else if (m_typeComputing == 3)
 	{
 
-
+		m_descentOpt->doDescentOpt();
 	}
 	else
 	{

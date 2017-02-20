@@ -15,6 +15,7 @@
 #include "IsotropicNeohookeanMaterial.h"
 #include "PosBaseDynamic.h"
 #include "ProjDynamic.h"
+#include "DescentOptimize.h"
 #include "CUDAInterface.h"
 
 class FVM : public QMainWindow
@@ -45,6 +46,7 @@ private:
 	std::shared_ptr<IsotropicNeohookeanMaterial> m_IsoMaterial;
 	std::shared_ptr<PosBaseDynamic> m_pbd;
 	std::shared_ptr<ProjDynamic> m_projd;
+	std::shared_ptr<DescentOptimize> m_descentOpt;
 	std::shared_ptr<CUDAInterface> m_cudaInterface;
 
 	QTimer *m_idleTimer;

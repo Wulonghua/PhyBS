@@ -29,6 +29,8 @@ public:
 	// it's easier to tranfer the codes to CUDA version
 	virtual void computeEnergy2FhatGradient(int tetID, const float *Fhats, float *gradient)=0;
 	virtual void computeEnergy2FhatHessian(int tetID, const float *Fhats, float *hessian)=0;
+	virtual Eigen::MatrixXf computeInnerForceFromPos(const Eigen::MatrixXf & pos)=0;
+	virtual float computeElasticEnergyFromPos(const Eigen::MatrixXf & pos)=0;
 
 	//Teran's method
 	Eigen::MatrixXf computeInnerForcesfromFhats();
@@ -40,10 +42,15 @@ public:
 	//Barbic's method
 	Eigen::MatrixXf computeInnerForcesfromFhats2(int num_Threads);
 
+	
+
 	// compute stiffness Matrix
 	Eigen::MatrixXf computeStiffnessMatrix(int tetID);
 	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix();
 	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrix(int num_Threads);
+
+	Eigen::MatrixXf computeStiffnessMatrixFromPos(int tetID, const Eigen::MatrixXf &pos);
+	Eigen::SparseMatrix<float, Eigen::RowMajor> computeGlobalStiffnessMatrixFromPos(const Eigen::MatrixXf &pos);
 
 	std::vector<int> & getDiagonalIdx() { return m_diagonalIdx; }
 	std::vector<int> & getKIDinCSRval() { return m_kIDinCSRval; }
@@ -80,6 +87,7 @@ protected:
 	Eigen::MatrixXf m_Us;
 	Eigen::MatrixXf m_Vs;
 	Eigen::MatrixXf m_Invariants;
+	Eigen::MatrixXf m_elasticEnergys;
 
 private:
 	//see [Teran. 2004], compute F_hat and make sure U,V are real rotation matrix.
