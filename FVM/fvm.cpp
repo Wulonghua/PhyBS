@@ -170,7 +170,7 @@ void FVM::DoOneStep()
 	else if (m_typeComputing == 3)
 	{
 
-		m_descentOpt->doDescentOpt();
+		m_descentOpt->doDescentOpt(96);
 	}
 	else
 	{

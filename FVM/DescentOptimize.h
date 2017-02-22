@@ -15,7 +15,7 @@ public:
 	~DescentOptimize();
 
 
-	void doDescentOpt();
+	void doDescentOpt(int iterations);
 
 private:
 	Eigen::MatrixXf computeGradient();
@@ -39,8 +39,6 @@ private:
 
 	int n_nodes;
 	int n_tets;
-
-	int m_iterations;
 
 	float m_alpha;
 

@@ -2,7 +2,7 @@
 
 
 DescentOptimize::DescentOptimize(std::shared_ptr<TetMesh> tetMesh, std::shared_ptr<IsotropicNeohookeanMaterial> isoMaterial):
-m_iterations(96), m_h(0.03), m_energy(0.0), m_energy_old(0.0), m_rho(0.999)
+m_h(0.03), m_energy(0.0), m_energy_old(0.0), m_rho(0.999)
 {
 	m_tetMesh = tetMesh;
 	m_IsoMaterial = isoMaterial;
@@ -24,6 +24,7 @@ void DescentOptimize::initialization()
 	//m_posk = m_pos1 + m_timeStep * m_vel1 + 0.2 * m_timeStep * (m_vel1 - m_vel0);
 	m_pos = m_tetMesh->getNodes() + m_h * m_tetMesh->getVelocities();
 	m_posk = m_pos + 0.2 * (m_tetMesh->getVelocities()-m_vel_old);
+	m_posk_old = m_posk;
 }
 
 Eigen::MatrixXf DescentOptimize::computeGradient()
@@ -35,7 +36,9 @@ Eigen::MatrixXf DescentOptimize::computeGradient()
 	}
 
 	Eigen::MatrixXf f = m_IsoMaterial->computeInnerForceFromPos(m_posk);
-	g = g - f;
+	m_tetMesh->initForcesFromGravityExternals();
+	Eigen::MatrixXf gravity = m_tetMesh->getForces();
+	g = g - f - gravity;
 
 	return g;
 }
@@ -59,20 +62,19 @@ float DescentOptimize::computeTotalEnergy(const Eigen::MatrixXf &pos)
 	return E;
 }
 
-void DescentOptimize::doDescentOpt()
+void DescentOptimize::doDescentOpt(int iterations)
 {
 	Eigen::MatrixXf delta_q;
 	Eigen::VectorXf H_q;
 	float m_h2_inv;
-	m_alpha = 0.3;
-	m_IsoMaterial->computeElasticEnergyFromPos(m_posk);
-	Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
+	m_alpha = 0.1;
+	//m_IsoMaterial->computeElasticEnergyFromPos(m_posk);
+	//Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
 	initialization();
-	delta_q = computeGradient();
 
-
-	for (int k = 0; k < m_iterations; ++k)
+	for (int k = 0; k < iterations; ++k)
 	{
+		if (m_alpha < 0.01) break;
 		if (k % 32 == 0)
 		{
 			H_q = m_IsoMaterial->computeGlobalStiffnessMatrixFromPos(m_posk).diagonal();
@@ -84,7 +86,7 @@ void DescentOptimize::doDescentOpt()
 				H_q[3 * i + 2] += m_h2_inv;
 			}
 		}
-
+		delta_q = computeGradient();
 		for (int i = 0; i < n_nodes; ++i)
 		{
 			delta_q(0, i) /= -H_q[3 * i + 0];
@@ -98,16 +100,16 @@ void DescentOptimize::doDescentOpt()
 		{
 			if (k == 0)
 			{
-				m_energy = m_energy_old = computeTotalEnergy(m_posk_next);
+				m_energy = m_energy_old = computeTotalEnergy(m_posk);
 			}
 			else
 			{
-				m_energy = computeTotalEnergy(m_posk_next);
+				m_energy = computeTotalEnergy(m_posk);
 				if (m_energy > m_energy_old)
 				{
 					m_alpha *= 0.7;
-					k -= 8;
-					m_iterations -= 8;
+					iterations -= 8;
+					k -= 1;
 					m_posk = m_posk_old;
 					continue;
 				}
@@ -123,8 +125,7 @@ void DescentOptimize::doDescentOpt()
 		else if(k == 10) m_omega = 2 / (2 - m_rho*m_rho);
 		else m_omega = 4 / (4 - m_rho*m_rho*m_omega);
 
-
-		m_posk_next = 0.9 * (m_posk_next - m_posk) + m_posk;
+		if (m_omega != 1.0)
 		m_posk_next = m_omega * (m_posk_next - m_posk_last) + m_posk_last;
 
 		m_posk_last = m_posk;
