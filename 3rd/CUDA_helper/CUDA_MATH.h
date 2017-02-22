@@ -155,14 +155,6 @@ void Matrix_Inverse_3(float *A, float *R)
 }
 
 __host__ __device__ __forceinline__
-void Matrix_Inverse_Transpose_3(float *A, float *R)
-{
-	float TMP[9];
-	Matrix_Inverse_3(A,TMP);
-	Matrix_Transose_3(TMP, R);
-}
-
-__host__ __device__ __forceinline__
 float Matrix_Determinant_3(float *x)
 {
 	return x[0] * (x[4] * x[8] - x[7] * x[5]) + x[3] * (x[7] * x[2] - x[1] * x[8]) + x[6] * (x[1] * x[5] - x[4] * x[2]);
@@ -186,7 +178,13 @@ void Matrix_Transose_3(float *A, float *R)
 // added by Longhua Wu
 //
 /***********************************************************************************/
-
+__host__ __device__ __forceinline__
+void Matrix_Inverse_Transpose_3(float *A, float *R)
+{
+	float TMP[9];
+	Matrix_Inverse_3(A, TMP);
+	Matrix_Transose_3(TMP, R);
+}
 __host__ __device__ __forceinline__
 void Matrix_Diagonal_Matrix_T_Product_3(float *U, float *S, float *V, float *F)
 {
