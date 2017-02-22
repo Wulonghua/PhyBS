@@ -46,13 +46,15 @@ float DescentOptimize::computeTotalEnergy(const Eigen::MatrixXf &pos)
 	m_IsoMaterial->computeElasticEnergyFromPos(pos);
 	Eigen::VectorXf Elastic = m_IsoMaterial->getElasticEnergys();
 
+	// elastic energy
 	for (int i = 0; i < n_tets; ++i)
 		E += Elastic[i];
 
+	// kinetic energy +  gravitational potential energy
 	Eigen::MatrixXf p = pos - m_pos;
 	for (int i = 0; i < n_nodes; ++i)
 	{
-		E += 0.5 * m_tetMesh->getMasses()[i] * p.col(i).squaredNorm();
+		E += 0.5 * m_tetMesh->getMasses()[i] * ( p.col(i).squaredNorm() + 9.8 * pos(1,i));
 	}
 	return E;
 }
@@ -63,8 +65,8 @@ void DescentOptimize::doDescentOpt()
 	Eigen::VectorXf H_q;
 	float m_h2_inv;
 	m_alpha = 0.3;
-	//m_IsoMaterial->computeElasticEnergyFromPos(m_posk);
-	//Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
+	m_IsoMaterial->computeElasticEnergyFromPos(m_posk);
+	Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
 	initialization();
 	delta_q = computeGradient();
 

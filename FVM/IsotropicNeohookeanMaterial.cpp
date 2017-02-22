@@ -118,12 +118,14 @@ void IsotropicNeohookeanMaterial::computeElasticEnergyFromPos(const Eigen::Matri
 	Eigen::Matrix3f F;
 	float I1, logJ;
 	int n_tets = m_tetModel->getTetsNum();
+	float energy;
 	for (int i = 0; i < n_tets; ++i)
 	{
 		F = m_tetModel->computeDeformationGradient(i, pos);
 		I1 = F.squaredNorm();
 		logJ = std::log(F.determinant());
-		m_elasticEnergys[i] = 0.5 * m_mus[i] * (I1 - 3) - m_mus[i] * logJ + 0.5 * m_lambdas[i] * logJ * logJ;
+		energy = 0.5 * m_mus[i] * (I1 - 3) - m_mus[i] * logJ + 0.5 * m_lambdas[i] * logJ * logJ;
+		m_elasticEnergys[i] = energy > 1e-6 ? energy : 0.0;
 	}
 }
 
