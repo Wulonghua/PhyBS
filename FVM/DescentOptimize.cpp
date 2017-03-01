@@ -56,7 +56,7 @@ Eigen::MatrixXf DescentOptimize::computeGradient()
 	auto consIDs = m_tetMesh->getConstraintIDs();
 	for (int i = 0; i < consIDs.size(); ++i)
 	{
-		g.col(i).setZero();
+		g.col(consIDs[i]).setZero();
 	}
 
 	return g;
@@ -180,7 +180,7 @@ void DescentOptimize::doDescentOpt(int iterations)
 		m_posk = m_posk_next;
 	}
 	m_vel_old = m_tetMesh->getVelocities();
-	m_tetMesh->getVelocities() = (m_posk - m_tetMesh->getNodes()) / m_h;
+	m_tetMesh->getVelocities() = 0.99 * (m_posk - m_tetMesh->getNodes()) / m_h;
 	m_tetMesh->getNodes() = m_posk;
 	//std::cout << m_posk(1, 0) << std::endl;
 }
