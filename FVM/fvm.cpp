@@ -152,6 +152,7 @@ void FVM::DoOneStep()
 		//Eigen::MatrixXf K = m_IsoMaterial->computeStiffnessMatrix(0);
 
 		Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrix(m_numThreads);
+		//Eigen::SparseMatrix<float, Eigen::RowMajor> sK = m_IsoMaterial->computeGlobalStiffnessMatrixFromPos(m_tetMesh->getNodes());
 
 		m_integrator->BackEuler(m_tetMesh->getNodes(),m_tetMesh->getVelocities(),
 			forces, sK);
@@ -207,7 +208,9 @@ void FVM::DoStop()
 	m_idleTimer->stop();
 	m_tetMesh->reset();
 	m_cudaInterface->reset();
+	m_descentOpt->reset();
 	ui.glWidget->update();
+	
 }
 
 void FVM::DoTest()

@@ -125,6 +125,7 @@ void IsotropicNeohookeanMaterial::computeElasticEnergyFromPos(const Eigen::Matri
 		I1 = F.squaredNorm();
 		logJ = std::log(F.determinant());
 		energy = 0.5 * m_mus[i] * (I1 - 3) - m_mus[i] * logJ + 0.5 * m_lambdas[i] * logJ * logJ;
+		energy *= m_tetModel->getTetVolume(i);
 		m_elasticEnergys[i] = energy > 1e-6 ? energy : 0.0;
 	}
 }

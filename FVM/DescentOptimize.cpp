@@ -2,16 +2,23 @@
 
 
 DescentOptimize::DescentOptimize(std::shared_ptr<TetMesh> tetMesh, std::shared_ptr<IsotropicNeohookeanMaterial> isoMaterial):
-m_h(0.03), m_energy(0.0), m_energy_old(0.0), m_rho(0.999)
+m_h(0.03), m_energy(0.0), m_energy_old(0.0)
 {
 	m_tetMesh = tetMesh;
 	m_IsoMaterial = isoMaterial;
-	m_vel_old = m_tetMesh->getVelocities();
 
 	n_nodes = m_tetMesh->getNodesNum();
 	n_tets = m_tetMesh->getTetsNum();
-	m_posk_last = m_posk = m_tetMesh->getNodes();
 
+	m_profile_k[0] = 1;
+	m_profile_k[1] = 7;
+	m_profile_k[2] = 10;
+	m_profile_v[0] = 0.96;
+	m_profile_v[1] = 0.991;
+	m_profile_v[2] = 0.999;
+	m_profile_n = 3;
+
+	reset();
 }
 
 
@@ -19,12 +26,18 @@ DescentOptimize::~DescentOptimize()
 {
 }
 
+void DescentOptimize::reset()
+{
+	m_vel_old = m_tetMesh->getVelocities();
+	m_posk_last = m_posk = m_tetMesh->getNodes();
+}
+
 void DescentOptimize::initialization()
 {
 	//m_posk = m_pos1 + m_timeStep * m_vel1 + 0.2 * m_timeStep * (m_vel1 - m_vel0);
 	m_pos = m_tetMesh->getNodes() + m_h * m_tetMesh->getVelocities();
-	m_posk = m_pos + 0.2 * (m_tetMesh->getVelocities()-m_vel_old);
-	m_posk_old = m_posk;
+	m_posk = m_pos + 0.2 * m_h* (m_tetMesh->getVelocities()-m_vel_old);
+	//m_posk_old = m_posk;
 }
 
 Eigen::MatrixXf DescentOptimize::computeGradient()
@@ -39,6 +52,12 @@ Eigen::MatrixXf DescentOptimize::computeGradient()
 	m_tetMesh->initForcesFromGravityExternals();
 	Eigen::MatrixXf gravity = m_tetMesh->getForces();
 	g = g - f - gravity;
+
+	auto consIDs = m_tetMesh->getConstraintIDs();
+	for (int i = 0; i < consIDs.size(); ++i)
+	{
+		g.col(i).setZero();
+	}
 
 	return g;
 }
@@ -55,9 +74,17 @@ float DescentOptimize::computeTotalEnergy(const Eigen::MatrixXf &pos)
 
 	// kinetic energy +  gravitational potential energy
 	Eigen::MatrixXf p = pos - m_pos;
+	auto consIDs = m_tetMesh->getConstraintIDs();
+	int fixi = 0;
+	float h2_inv = 1 / (m_h*m_h);
 	for (int i = 0; i < n_nodes; ++i)
 	{
-		E += 0.5 * m_tetMesh->getMasses()[i] * ( p.col(i).squaredNorm() + 9.8 * pos(1,i));
+		if (consIDs.size() > 0 && consIDs[fixi] == i)
+		{
+			fixi++;
+			continue;
+		}
+		E += 0.5 * m_tetMesh->getMasses()[i] * ( p.col(i).squaredNorm() * h2_inv + 2 * 9.8 * pos(1,i));
 	}
 	return E;
 }
@@ -71,10 +98,35 @@ void DescentOptimize::doDescentOpt(int iterations)
 	//m_IsoMaterial->computeElasticEnergyFromPos(m_posk);
 	//Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
 	initialization();
-
+	//std::cout << std::endl;
 	for (int k = 0; k < iterations; ++k)
 	{
 		if (m_alpha < 0.01) break;
+		
+		if (k % 8 == 0)
+		{
+			m_energy = computeTotalEnergy(m_posk);
+			
+			if (k != 0 && m_energy > m_energy_old)
+			{
+				m_alpha *= 0.7;
+				iterations -= k-8;
+				k -= 1;
+				m_posk = m_posk_old;
+				//std::cout << "restore to last state: " << computeTotalEnergy(m_posk) << std::endl;
+				//std::cout << "k = " << k << std::endl;
+				//std::cout << "alpha =" << m_alpha << std::endl;
+				//std::cout << "iterations = " << iterations << std::endl;
+				continue;
+			}
+			else
+			{
+				m_energy_old = m_energy;
+				m_posk_old = m_posk;
+			}
+		}
+
+		//std::cout << "energy: " << computeTotalEnergy(m_posk) << std::endl;
 		if (k % 32 == 0)
 		{
 			H_q = m_IsoMaterial->computeGlobalStiffnessMatrixFromPos(m_posk).diagonal();
@@ -96,34 +148,30 @@ void DescentOptimize::doDescentOpt(int iterations)
 
 		m_posk_next = m_posk + m_alpha * delta_q;
 
-		if (k % 8 == 0)
+		//if (k < 10) m_omega = 1.0;
+		//else if(k == 10) m_omega = 2 / (2 - m_rho*m_rho);
+		//else m_omega = 4 / (4 - m_rho*m_rho*m_omega);
+
+		if (k == 0)				
+		{ 
+			m_rho = 0;
+			m_omega = 1; 
+		}
+		m_omega = 4 / (4 - m_rho*m_rho*m_omega);
+		for (int i = 0; i<m_profile_n; i++)
 		{
-			if (k == 0)
+			if (k == m_profile_k[i] - 1)
 			{
-				m_energy = m_energy_old = computeTotalEnergy(m_posk);
+				m_rho = 0;
+				m_omega = 1;
 			}
-			else
+			if (k == m_profile_k[i])
 			{
-				m_energy = computeTotalEnergy(m_posk);
-				if (m_energy > m_energy_old)
-				{
-					m_alpha *= 0.7;
-					iterations -= 8;
-					k -= 1;
-					m_posk = m_posk_old;
-					continue;
-				}
-				else
-				{
-					m_energy_old = m_energy;
-					m_posk_old   = m_posk;
-				}
+				m_rho = m_profile_v[i];
+				m_omega = 2 / (2 - m_rho*m_rho);
+				break;
 			}
 		}
-
-		if (k < 10) m_omega = 1.0;
-		else if(k == 10) m_omega = 2 / (2 - m_rho*m_rho);
-		else m_omega = 4 / (4 - m_rho*m_rho*m_omega);
 
 		if (m_omega != 1.0)
 		m_posk_next = m_omega * (m_posk_next - m_posk_last) + m_posk_last;
@@ -134,4 +182,5 @@ void DescentOptimize::doDescentOpt(int iterations)
 	m_vel_old = m_tetMesh->getVelocities();
 	m_tetMesh->getVelocities() = (m_posk - m_tetMesh->getNodes()) / m_h;
 	m_tetMesh->getNodes() = m_posk;
+	//std::cout << m_posk(1, 0) << std::endl;
 }

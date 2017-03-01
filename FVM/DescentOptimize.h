@@ -14,7 +14,7 @@ public:
 	DescentOptimize(std::shared_ptr<TetMesh> tetMesh, std::shared_ptr<IsotropicNeohookeanMaterial> isoMaterial);
 	~DescentOptimize();
 
-
+	void reset();
 	void doDescentOpt(int iterations);
 
 private:
@@ -48,5 +48,8 @@ private:
 	float m_rho;
 	float m_omega;
 
+	int		m_profile_k[3];
+	float	m_profile_v[3];
+	int		m_profile_n;
 };
 

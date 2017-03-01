@@ -46,6 +46,7 @@ public:
 	Eigen::MatrixXi & getTets() { return m_tets; }
 	std::vector<int> & getConstraintIDs() { return m_constraintIDs; }
 	Eigen::VectorXf & getTetVolumes() { return m_tet_vols; }
+	float getTetVolume(int i) { return m_tet_vols[i]; }
 	int getNodesNum() { return n_nodes; }
 	int getTetsNum() { return n_tets; }
 	float getE() { return m_E; }
