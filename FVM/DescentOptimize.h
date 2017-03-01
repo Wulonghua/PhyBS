@@ -18,7 +18,7 @@ public:
 	void doDescentOpt(int iterations);
 
 private:
-	Eigen::MatrixXf computeGradient();
+	Eigen::MatrixXf computeGradient(const Eigen::MatrixXf &ext_f);
 	void initialization();
 	float computeTotalEnergy(const Eigen::MatrixXf &pos);
 

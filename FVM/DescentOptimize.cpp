@@ -40,7 +40,7 @@ void DescentOptimize::initialization()
 	//m_posk_old = m_posk;
 }
 
-Eigen::MatrixXf DescentOptimize::computeGradient()
+Eigen::MatrixXf DescentOptimize::computeGradient(const Eigen::MatrixXf &ext_f)
 {
 	Eigen::MatrixXf g = m_posk - m_pos;
 	for (int i = 0; i < n_nodes; ++i)
@@ -49,9 +49,7 @@ Eigen::MatrixXf DescentOptimize::computeGradient()
 	}
 
 	Eigen::MatrixXf f = m_IsoMaterial->computeInnerForceFromPos(m_posk);
-	m_tetMesh->initForcesFromGravityExternals();
-	Eigen::MatrixXf gravity = m_tetMesh->getForces();
-	g = g - f - gravity;
+	g = g - f - ext_f;
 
 	auto consIDs = m_tetMesh->getConstraintIDs();
 	for (int i = 0; i < consIDs.size(); ++i)
@@ -86,6 +84,7 @@ float DescentOptimize::computeTotalEnergy(const Eigen::MatrixXf &pos)
 		}
 		E += 0.5 * m_tetMesh->getMasses()[i] * ( p.col(i).squaredNorm() * h2_inv + 2 * 9.8 * pos(1,i));
 	}
+	E += m_tetMesh->computeExternalForcesEnergy(pos);
 	return E;
 }
 
@@ -99,6 +98,8 @@ void DescentOptimize::doDescentOpt(int iterations)
 	//Eigen::VectorXf tmp = m_IsoMaterial->getElasticEnergys();
 	initialization();
 	//std::cout << std::endl;
+	m_tetMesh->initForcesFromGravityExternals();
+	Eigen::MatrixXf extForce = m_tetMesh->getForces();
 	for (int k = 0; k < iterations; ++k)
 	{
 		if (m_alpha < 0.01) break;
@@ -138,7 +139,7 @@ void DescentOptimize::doDescentOpt(int iterations)
 				H_q[3 * i + 2] += m_h2_inv;
 			}
 		}
-		delta_q = computeGradient();
+		delta_q = computeGradient(extForce);
 		for (int i = 0; i < n_nodes; ++i)
 		{
 			delta_q(0, i) /= -H_q[3 * i + 0];
@@ -182,5 +183,6 @@ void DescentOptimize::doDescentOpt(int iterations)
 	m_vel_old = m_tetMesh->getVelocities();
 	m_tetMesh->getVelocities() = 0.99 * (m_posk - m_tetMesh->getNodes()) / m_h;
 	m_tetMesh->getNodes() = m_posk;
+	m_tetMesh->resetExternalForce();
 	//std::cout << m_posk(1, 0) << std::endl;
 }

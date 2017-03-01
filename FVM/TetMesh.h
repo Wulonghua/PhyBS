@@ -31,6 +31,7 @@ public:
 	Eigen::Matrix3f computeDeformationGradient(int tetID, const Eigen::MatrixXf & nodes);
 
 	Eigen::MatrixXf computeExternalForces();
+	float computeExternalForcesEnergy(Eigen::MatrixXf pos);
 
 	void drawTetBoundFace();
 	void drawDraggedNodes(int faceID);
@@ -40,6 +41,8 @@ public:
 	Eigen::MatrixXf & getNodes() { return m_nodes; }
 	Eigen::MatrixXf & getVelocities() { return m_velocities; }
 	Eigen::MatrixXf & getForces() { return m_nodes_forces; }
+	Eigen::MatrixXf & getGravities() { return m_nodes_gravity; }
+	Eigen::MatrixXf & getExternalForces() { return m_nodes_external_forces; }
 	Eigen::VectorXf & getMasses() { return m_nodes_mass; }
 	Eigen::VectorXf & getInvMasses() { return m_nodes_invMass; }
 	Eigen::MatrixXf & getRestPosition() { return m_rest_positions; }
@@ -57,12 +60,13 @@ public:
 	Eigen::MatrixXf & getDmInvs() { return m_Dm_inverses; }
 	int getNodeGlobalIDinTet(int tetID, int localID) { return m_tets(localID, tetID); }
 	
+	
 
 	void addNodesForces(Eigen::MatrixXf &forces) { m_nodes_forces += forces;}
 	void addNodeForce(int nodeID, const Eigen::Vector3f &force) { m_nodes_forces.col(nodeID) += force; }
 	void addFixNodeSpringForces();
 	void initForcesFromGravityExternals() { m_nodes_forces = m_nodes_gravity + m_nodes_external_forces; }
-	void resetExternalForce() { m_nodes_external_forces.setZero();}
+	void resetExternalForce() { m_nodes_external_forces.setZero(); m_pickedFaceID = -1; }
 	void clearConstraintForces();
 	void dragFace(int faceID, const Eigen::Vector3f &dragline);
 	void dragFaceRing(int faceID, const Eigen::Vector3f &dragline);
@@ -110,10 +114,11 @@ private:
 	float m_E;
 	float m_nu;
 
+	int m_pickedFaceID;
+
 	float m_Enu1, m_Enu2, m_Enu3;    // for linear 
 
 	int n_nodes;
 	int n_tets;
 	int n_bound_faces;
-
 };

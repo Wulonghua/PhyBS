@@ -2,7 +2,7 @@
 #include "RenderWidget.h"
 
 
-TetMesh::TetMesh()
+TetMesh::TetMesh() :m_pickedFaceID(-1)
 {
 	initModel();
 }
@@ -456,6 +456,8 @@ void TetMesh::dragFaceRing(int faceID, const Eigen::Vector3f &dragline)
 	{
 		m_nodes_external_forces.col(*iter) += 0.5 * factor * m_nodes_mass(*iter) * dir;
 	}
+
+	m_pickedFaceID = faceID;
 }
 
 void TetMesh::updateNodesVelocities(const Eigen::MatrixXf & pos, const Eigen::MatrixXf & vel)
@@ -581,3 +583,23 @@ Eigen::MatrixXf TetMesh::computeExternalForces()
 	return m_nodes_forces;
 }
 
+float TetMesh::computeExternalForcesEnergy(Eigen::MatrixXf pos)
+{
+	float E = 0.0;
+	if (m_pickedFaceID < 0)
+		return E;
+	int nodeID;
+
+	for (int i = 0; i < 3; ++i)
+	{
+		nodeID = m_faceRingIndices[m_pickedFaceID][i];
+		//std::cout << nodeID << std::endl;
+		E -= pos.col(nodeID).dot(m_nodes_external_forces.col(nodeID));
+	}
+
+	for (auto iter = m_faceRingIndices[m_pickedFaceID].begin() + 3; iter != m_faceRingIndices[m_pickedFaceID].end(); ++iter)
+	{
+		E -= m_nodes_external_forces.col(*iter).dot(pos.col(*iter));
+	}
+	return E;
+}
