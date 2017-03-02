@@ -6,9 +6,9 @@ FVM::FVM(QWidget *parent)
 	ui.setupUi(this);
 	// ui setting
 	m_comboboxType = new QComboBox();
-	m_comboboxType->addItem(QStringLiteral("CPU_force"));
+	m_comboboxType->addItem(QStringLiteral("CPU_force_OpenMP"));
 	m_comboboxType->addItem(QStringLiteral("CPU_PBD"));
-	m_comboboxType->addItem(QStringLiteral("CPU_ProjDynamic"));
+	m_comboboxType->addItem(QStringLiteral("CPU_ProjDynamic_OpenMP"));
 	m_comboboxType->addItem(QStringLiteral("CPU_DescentOptimize"));
 	m_comboboxType->addItem(QStringLiteral("GPU_force"));
 	ui.mainToolBar->addWidget(m_comboboxType);

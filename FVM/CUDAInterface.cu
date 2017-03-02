@@ -98,7 +98,6 @@ void computeDPDFij(float *U, float *Fhats, float *V, float *PFhats, float *hessi
 	}
 }
 
-
 __host__ __device__ 
 void compute_dfdx(float *U, float *Fhat, float *V, float *AN, float *Dm_inv, float mu, float lambda, float *dfdx)
 {
