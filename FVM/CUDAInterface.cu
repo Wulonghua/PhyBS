@@ -270,7 +270,7 @@ __global__ void computeGlobalK(float *Us, float *Fhats, float *Vs, int *tets, in
 	//t_globalK += m_timeTest.restart();
 }
 
-__global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, float density, float *Dm_inv, float *masses, float *ANs)
+__global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, float density, float *Dm_inv, float *masses, float *ANs, float *vols)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_tets)	return;
@@ -291,8 +291,10 @@ __global__ void compute_DmInv_ANs_Mass(float *nodes, int *tets, int num_tets, fl
 	cuMath::Matrix_Inverse_3(Dm, Dm_);
 	memcpy(Dm_inv + 9 * i, Dm_, sizeof(float) * 9);
 
-	// compute node' mass
-	float m = fabsf(cuMath::Matrix_Determinant_3(Dm)) / 24.0 * density;
+	// compute tet's volumn and node' mass
+	float v = fabsf(cuMath::Matrix_Determinant_3(Dm)) / 6.0;
+	vols[i] = v;
+	float m = v * 0.25 * density;
 	for (int k = 0; k < 4; ++k)
 	{
 		atomicAdd(masses+tets[i * 4 + k], m);
@@ -341,7 +343,8 @@ __global__ void addFixContraintsAndGravity(float *nodes, float *rest, float *gra
 
 }
 
-__global__ void computeForceKd(float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *Kd, float *inner_forces, bool computeHd)
+// Descend Optimize Method
+__global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *vols, float *Kd, float *inner_forces)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_tets)	return;
@@ -388,7 +391,17 @@ __global__ void computeForceKd(float *nodes, int *tets, int num_tets, float *Dm_
 	atomicAdd(f3 + 1, forces[5]);
 	atomicAdd(f3 + 2, forces[8]);
 
+	// compute elastic energy
+	float energy, logJ;
+	float I1 = 0.0;
+	for (int k = 0; k < 9; ++k)
+		I1 += F[k] * F[k];
+	logJ = log(cuMath::Matrix_Determinant_3(F));
+	energy = (0.5 * mus[i] * (I1 - 3) - mus[i] * logJ + 0.5 * lambdas[i] * logJ * logJ)*vols[i];
+
 	if (!computeHd) return;
+
+
 	float Fhat[9], U[9], V[9];
 	cuMath::Matrix_SVD_3(F, U, Fhat, V);
 
@@ -533,7 +546,6 @@ __global__ void setLHSofLinearSystem(float *m_s, int n, float *Valptr, int *diag
 	Valptr[diagonalIdx[i]] += m_s[i];
 }
 
-
 __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -570,6 +582,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&d_Dm_inverses, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_mus, sizeof(float) * n_tets);
 	cudaMalloc((void **)&d_lambdas, sizeof(float) * n_tets);
+	cudaMalloc((void **)&d_vols, sizeof(float) * n_tets);
 	cudaMalloc((void **)&d_Fhats, sizeof(float) * 3 * n_tets);
 	cudaMalloc((void **)&d_Us, sizeof(float) * 9 * n_tets);
 	cudaMalloc((void **)&d_Vs, sizeof(float) * 9 * n_tets);
@@ -607,7 +620,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	// compute d_Dm_inverses, d_masses, and d_ANs
 	compute_DmInv_ANs_Mass << < m_tet_blocksPerGrid, m_tet_threadsPerBlock >> >(d_restPoses, d_tets,
 																 n_tets, density, d_Dm_inverses,
-																				d_masses, d_ANs);
+																				d_masses, d_ANs, d_vols);
 	cudaDeviceSynchronize();
 	scaleDeviceArray << < m_node_blocksPerGrid, m_node_threadsPerBlock >> >(d_masses, d_gravities, -9.8, n_nodes);
 	cudaDeviceSynchronize();
@@ -634,6 +647,7 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_Dm_inverses);
 	cudaFree(d_mus);
 	cudaFree(d_lambdas);
+	cudaFree(d_vols);
 	cudaFree(d_Fhats);
 	cudaFree(d_Us);
 	cudaFree(d_Vs);

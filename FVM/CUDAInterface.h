@@ -43,6 +43,7 @@ private:
 	  float *d_gravities;
 	  float *d_masses_scaled;    // (1+dumping_alpha*timestep)*M
 	  float *d_ANs;
+	  float *d_vols;			// tet's volumn
 	  float *d_Dm_inverses;
 	  float *d_mus;
 	  float *d_lambdas;
