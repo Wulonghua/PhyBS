@@ -343,81 +343,6 @@ __global__ void addFixContraintsAndGravity(float *nodes, float *rest, float *gra
 
 }
 
-// Descend Optimize Method
-__global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *vols, float *Kd, float *inner_forces)
-{
-	int i = blockDim.x * blockIdx.x + threadIdx.x;
-	if (i >= num_tets)	return;
-	
-	// compute Ds
-	float *pos0 = nodes + 3 * tets[i * 4 + 0];
-	float *pos1 = nodes + 3 * tets[i * 4 + 1];
-	float *pos2 = nodes + 3 * tets[i * 4 + 2];
-	float *pos3 = nodes + 3 * tets[i * 4 + 3];
-
-	float Ds[9];
-	for (int k = 0; k < 3; ++k)
-	{
-		Ds[0 + k * 3] = *(pos1 + k) - *(pos0 + k);
-		Ds[1 + k * 3] = *(pos2 + k) - *(pos0 + k);
-		Ds[2 + k * 3] = *(pos3 + k) - *(pos0 + k);
-	}
-	
-	// compute deformation gradient
-	float F[9],P[9],forces[9];
-	cuMath::Matrix_Product_3(Ds, Dm_invs + 9 * i, F);
-	computeFirstPiolaStress(F, mus[i], lambdas[i], P);
-
-	cuMath::Matrix_Product_3(P, ANs + 9 * i, forces);
-
-	float *f0 = inner_forces + 3 * tets[i * 4 + 0];
-	float *f1 = inner_forces + 3 * tets[i * 4 + 1];
-	float *f2 = inner_forces + 3 * tets[i * 4 + 2];
-	float *f3 = inner_forces + 3 * tets[i * 4 + 3];
-
-	atomicAdd(f0,     -forces[0] - forces[1] - forces[2]);
-	atomicAdd(f0 + 1, -forces[3] - forces[4] - forces[5]);
-	atomicAdd(f0 + 2, -forces[6] - forces[7] - forces[8]);
-
-	atomicAdd(f1, forces[0]);
-	atomicAdd(f1 + 1, forces[3]);
-	atomicAdd(f1 + 2, forces[6]);
-
-	atomicAdd(f2, forces[1]);
-	atomicAdd(f2 + 1, forces[4]);
-	atomicAdd(f2 + 2, forces[7]);
-
-	atomicAdd(f3, forces[2]);
-	atomicAdd(f3 + 1, forces[5]);
-	atomicAdd(f3 + 2, forces[8]);
-
-	// compute elastic energy
-	float energy, logJ;
-	float I1 = 0.0;
-	for (int k = 0; k < 9; ++k)
-		I1 += F[k] * F[k];
-	logJ = log(cuMath::Matrix_Determinant_3(F));
-	energy = (0.5 * mus[i] * (I1 - 3) - mus[i] * logJ + 0.5 * lambdas[i] * logJ * logJ)*vols[i];
-
-	if (!computeHd) return;
-
-
-	float Fhat[9], U[9], V[9];
-	cuMath::Matrix_SVD_3(F, U, Fhat, V);
-
-	float dfdx[144];
-	compute_dfdx(U, Fhat, V, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
-
-	for (int n = 0; n < 4; ++n)
-	{
-		for (int m = 0; m < 3; ++m)
-		{
-			int k = n * 3 + m;
-			atomicAdd(Kd + tets[i * 4 + n] * 3 + m, -dfdx[k * 12 + k]);
-		}
-	}
-}
-
 __global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
 								   float *Dm_inv, float *ANs, float *mus, float *lambdas,
 								   float *Us, float *Fhats, float *Vs, float *inner_forces)
@@ -554,6 +479,126 @@ __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 	mass_s[3 * i + 0] = mass_s[3 * i + 1] = mass_s[3 * i + 2] = mass[i] * s;
 }
 
+__global__ void initDescentOpt(float *nodes, float *nodes_explicit, float *v, float *v_last, float h, int n)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= n) return;
+	int id;
+	for (int k = 0; k < 3; ++k)
+	{
+		id = i * 3 + k;
+		nodes_explicit[id] = nodes[id] + v[id] * h;
+		nodes[id] = nodes_explicit[id] + 0.2 * (v[id] - v_last[id]) * h;
+	}
+}
+
+// Descend Optimize Method
+__global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *vols, float *Kd, float *inner_forces,float *Energys)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_tets)	return;
+
+	// compute Ds
+	float *pos0 = nodes + 3 * tets[i * 4 + 0];
+	float *pos1 = nodes + 3 * tets[i * 4 + 1];
+	float *pos2 = nodes + 3 * tets[i * 4 + 2];
+	float *pos3 = nodes + 3 * tets[i * 4 + 3];
+
+	float Ds[9];
+	for (int k = 0; k < 3; ++k)
+	{
+		Ds[0 + k * 3] = *(pos1 + k) - *(pos0 + k);
+		Ds[1 + k * 3] = *(pos2 + k) - *(pos0 + k);
+		Ds[2 + k * 3] = *(pos3 + k) - *(pos0 + k);
+	}
+
+	// compute deformation gradient
+	float F[9], P[9], forces[9];
+	cuMath::Matrix_Product_3(Ds, Dm_invs + 9 * i, F);
+	computeFirstPiolaStress(F, mus[i], lambdas[i], P);
+
+	cuMath::Matrix_Product_3(P, ANs + 9 * i, forces);
+
+	float *f0 = inner_forces + 3 * tets[i * 4 + 0];
+	float *f1 = inner_forces + 3 * tets[i * 4 + 1];
+	float *f2 = inner_forces + 3 * tets[i * 4 + 2];
+	float *f3 = inner_forces + 3 * tets[i * 4 + 3];
+
+	atomicAdd(f0, -forces[0] - forces[1] - forces[2]);
+	atomicAdd(f0 + 1, -forces[3] - forces[4] - forces[5]);
+	atomicAdd(f0 + 2, -forces[6] - forces[7] - forces[8]);
+
+	atomicAdd(f1, forces[0]);
+	atomicAdd(f1 + 1, forces[3]);
+	atomicAdd(f1 + 2, forces[6]);
+
+	atomicAdd(f2, forces[1]);
+	atomicAdd(f2 + 1, forces[4]);
+	atomicAdd(f2 + 2, forces[7]);
+
+	atomicAdd(f3, forces[2]);
+	atomicAdd(f3 + 1, forces[5]);
+	atomicAdd(f3 + 2, forces[8]);
+
+	// compute elastic energy
+	float energy, logJ;
+	float I1 = 0.0;
+	for (int k = 0; k < 9; ++k)
+		I1 += F[k] * F[k];
+	logJ = log(cuMath::Matrix_Determinant_3(F));
+	energy = (0.5 * mus[i] * (I1 - 3) - mus[i] * logJ + 0.5 * lambdas[i] * logJ * logJ)*vols[i];
+	energy = MAX(energy, 0.0);
+	atomicAdd(Energys+tets[i*4], energy);
+
+	if (!computeHd) return;
+
+	float Fhat[9], U[9], V[9];
+	cuMath::Matrix_SVD_3(F, U, Fhat, V);
+
+	float dfdx[144];
+	compute_dfdx(U, Fhat, V, ANs + 9 * i, Dm_invs + 9 * i, mus[i], lambdas[i], dfdx);
+
+	for (int n = 0; n < 4; ++n)
+	{
+		for (int m = 0; m < 3; ++m)
+		{
+			int k = n * 3 + m;
+			atomicAdd(Kd + tets[i * 4 + n] * 3 + m, -dfdx[k * 12 + k]);
+		}
+	}
+}
+
+// compute delta_q (see CPU version codes for reference) and update nodes_next, also add energy
+// b: inner force
+__global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *nodes, float *nodes_explicit, float *v, float h, float *gravitys, int *fixed_mask, float alpha, int num_nodes, float *Energys, float *nodes_next)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_nodes)	return;
+	if (fixed_mask[i] > 0) return;
+
+	// adds energys
+	int id;
+	float m_h2_inv = masses[i] / (h*h);
+
+	for (int k = 0; k < 3; ++k)
+	{
+		id = i * 3 + k;
+		Energys[i] += 0.5 * (nodes[id] - nodes_explicit[id]) * (nodes[id] - nodes_explicit[id]) * m_h2_inv; 
+	}
+	Energys[i] += 9.8 * nodes[i * 3 + 1] * masses[i];
+
+	float g[3];
+	g[0] = (nodes[i * 3    ] - nodes_explicit[i * 3    ]) * m_h2_inv - b[i * 3    ];
+	g[1] = (nodes[i * 3 + 1] - nodes_explicit[i * 3 + 1]) * m_h2_inv - b[i * 3 + 1] - gravitys[i];
+	g[2] = (nodes[i * 3 + 2] - nodes_explicit[i * 3 + 2]) * m_h2_inv - b[i * 3 + 2];
+
+	for (int k = 0; k < 3; ++k)
+	{
+		id = i * 3 + k;
+		nodes_next[id] = nodes[id] - g[k] / (Hd[id]+m_h2_inv);
+	}
+}
+
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
@@ -572,8 +617,13 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	// allocate device memory
 	cudaMalloc((void **)&d_tets, sizeof(int) * 4 * n_tets);
 	cudaMalloc((void **)&d_nodes, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_nodes_next, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_nodes_last, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_nodes_old, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_nodes_explicit, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_restPoses, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_velocities, sizeof(float) * 3 * n_nodes);
+	cudaMalloc((void **)&d_velocities_last, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_masses, sizeof(float) * n_nodes);
 	cudaMalloc((void **)&d_gravities, sizeof(float) * n_nodes);
 	cudaMalloc((void **)&d_masses_scaled, sizeof(float) * n_nodes*3);
@@ -593,6 +643,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&d_kIDinCSRval, sizeof(int)*n_tets * 48);
 	cudaMalloc((void **)&d_b, sizeof(float) * n_nodes * 3);
 	cudaMalloc((void **)&d_Hd, sizeof(float) * n_nodes * 3);
+	cudaMalloc((void **)&d_Energy, sizeof(float) * n_nodes);
 
     //Copy data from host to device
 	cudaMemcpy(d_tets, tets, sizeof(int) * 4 * n_tets, cudaMemcpyHostToDevice);
@@ -637,12 +688,25 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	//std::cout << "scaled mass: " << std::endl;
 	//printData << <1, 1 >> >(d_masses_scaled, 4, 3);
 	//cudaDeviceSynchronize();
+
+	m_profile_k[0] = 1;
+	m_profile_k[1] = 7;
+	m_profile_k[2] = 10;
+	m_profile_v[0] = 0.96;
+	m_profile_v[1] = 0.991;
+	m_profile_v[2] = 0.999;
+	m_profile_n = 3;
+	reset();
 }
 
 CUDAInterface::~CUDAInterface()
 {
 	cudaFree(d_tets);
 	cudaFree(d_nodes);
+	cudaFree(d_nodes_next);
+	cudaFree(d_nodes_last);
+	cudaFree(d_nodes_old);
+	cudaFree(d_nodes_explicit);
 	cudaFree(d_ANs);
 	cudaFree(d_Dm_inverses);
 	cudaFree(d_mus);
@@ -654,11 +718,13 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_constraintsMask);
 	cudaFree(d_restPoses);
 	cudaFree(d_velocities);
+	cudaFree(d_velocities_last);
 	cudaFree(d_masses);
 	cudaFree(d_gravities);
 	cudaFree(d_masses_scaled);
 	cudaFree(d_b);
 	cudaFree(d_Hd);
+	cudaFree(d_Energy);
 }
 
 void CUDAInterface::updateNodePositions(const float *hostnodes)
@@ -669,7 +735,9 @@ void CUDAInterface::updateNodePositions(const float *hostnodes)
 void CUDAInterface::reset()
 {
 	cudaMemcpy(d_nodes, d_restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyDeviceToDevice);
+	cudaMemcpy(d_nodes_last, d_restPoses, sizeof(float) * 3 * n_nodes, cudaMemcpyDeviceToDevice);
 	cudaMemset(d_velocities, 0, sizeof(float) * 3 * n_nodes);
+	cudaMemset(d_velocities_last, 0, sizeof(float) * 3 * n_nodes);
 }
 
 void CUDAInterface::computeInnerforces()
@@ -774,8 +842,81 @@ void CUDAInterface::doBackEuler(float *hostNode)
 	cudaDeviceSynchronize();
 }
 
-void CUDAInterface::computeForceKdiagonal()
+float CUDAInterface::sumEnergy()
 {
+	thrust::device_ptr<float> d_e(d_Energy);
+	return thrust::reduce(d_e, d_e + n_nodes);
+}
 
+void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH)
+{
+	if (isUpdateH)
+		cudaMemset(d_Hd,	 0, sizeof(float) * n_nodes * 3);
+	cudaMemset(d_b,		 0, sizeof(float) * n_nodes); // d_b is force
+	cudaMemset(d_Energy, 0, sizeof(float) * n_nodes);
 
+	computeForceKd<<<m_tet_blocksPerGrid, m_tet_threadsPerBlock>>>(isUpdateH, d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_vols, d_Hd, d_b, d_Energy);
+	updateNodesNextIter<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_Hd, d_b, d_masses, d_nodes, d_nodes_explicit, d_velocities, m_timestep,
+		d_gravities, d_constraintsMask, alpha, n_nodes, d_Energy, d_nodes_next);
+}
+
+void CUDAInterface::doDescentOpt(float h, int iterations, bool isUpdateH)
+{
+	m_alpha = 0.1;
+	initDescentOpt<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_nodes, d_nodes_explicit, d_velocities, d_velocities_last, m_timestep, n_nodes);
+	for (int k = 0; k < iterations; ++k)
+	{
+		if (m_alpha < 0.01) break;
+		bool isUpdateH = false;
+		if (k % 32 == 0)
+			isUpdateH = true;
+
+		updateDescentOptOneIter(m_alpha, m_timestep, isUpdateH);
+
+		if (k % 8 == 0)
+		{
+			m_energy = sumEnergy();
+
+			if (k != 0 && m_energy > m_energy_old)
+			{
+				m_alpha *= 0.7;
+				iterations -= k - 8;
+				k -= 1;
+				cudaMemcpy(d_nodes_old, d_nodes, sizeof(float)*n_nodes, cudaMemcpyDeviceToDevice);
+				continue;
+			}
+			else
+			{
+				m_energy_old = m_energy;
+				cudaMemcpy(d_nodes_old, d_nodes, sizeof(float)*n_nodes, cudaMemcpyDeviceToDevice);
+			}
+		}
+
+		if (k == 0)
+		{
+			m_rho = 0;
+			m_omega = 1;
+		}
+		m_omega = 4 / (4 - m_rho*m_rho*m_omega);
+		for (int i = 0; i<m_profile_n; i++)
+		{
+			if (k == m_profile_k[i] - 1)
+			{
+				m_rho = 0;
+				m_omega = 1;
+			}
+			if (k == m_profile_k[i])
+			{
+				m_rho = m_profile_v[i];
+				m_omega = 2 / (2 - m_rho*m_rho);
+				break;
+			}
+		}
+
+		//if (m_omega != 1.0)
+		//	m_posk_next = m_omega * (m_posk_next - m_posk_last) + m_posk_last;
+
+		//m_posk_last = m_posk;
+		//m_posk = m_posk_next;
+	}
 }

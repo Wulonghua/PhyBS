@@ -9,6 +9,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <device_functions.h>
+#include <thrust/device_vector.h>
+#include <thrust/reduce.h>
 #include "CUDA_MATH.h"       // helper matrix operations 
 #include "helper_math.h" // helper vector(float3) operations
 #include "CUDALinearSolvers.h"
@@ -29,16 +31,27 @@ public:
 	void updateNodePositions(const float *hostNode);
 	void reset();
 
-	void computeForceKdiagonal();
+
+	void doDescentOpt(float h, int iterations, bool isUpdateH); // h: timestep
 
 private:
+	// Descent Optimize 
+	void updateDescentOptOneIter(float alpha, float h, bool isUpdateH);
+	float sumEnergy();
+
 	  int n_nodes;
 	  int n_tets;
 	  int *d_tets;
 	  int *d_constraintsMask;  
 	  float	*d_nodes;
+	  float *d_nodes_next;
+	  float *d_nodes_last;
+	  float *d_nodes_old;
+	  float *d_nodes_explicit;
+
 	  float *d_restPoses;
 	  float *d_velocities;
+	  float *d_velocities_last;
 	  float *d_masses;
 	  float *d_gravities;
 	  float *d_masses_scaled;    // (1+dumping_alpha*timestep)*M
@@ -51,6 +64,7 @@ private:
 	  float *d_Us;
 	  float *d_Vs;
 	  float *d_Hd;				// Hessian diagonal
+	  float *d_Energy;
 
 	  // first stroe for global stiffness matrix then for LHS of the linear system.
 	  // if jacobi iterative method is used, then store for the C matrix Part (see [Wang 2015]) 
@@ -71,4 +85,17 @@ private:
 
 	  
 	  CUDALinearSolvers * cuLinearSolver;
+
+	  // for Descent Optimize Method
+	  float		m_alpha;
+
+	  float		m_energy;
+	  float		m_energy_old;
+
+	  float		m_rho;
+	  float		m_omega;
+
+	  int		m_profile_k[3];
+	  float		m_profile_v[3];
+	  int		m_profile_n;
 };

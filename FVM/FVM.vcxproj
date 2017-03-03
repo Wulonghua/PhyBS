@@ -116,6 +116,9 @@
       <AdditionalDependencies>qtmaind.lib;Qt5Cored.lib;Qt5Guid.lib;Qt5OpenGLd.lib;opengl32.lib;glu32.lib;Qt5UiToolsd.lib;Qt5Widgetsd.lib;Qt5Xmld.lib;QGLViewerd2.lib;libiomp5md.lib;mkl_intel_lp64.lib;mkl_core.lib;mkl_intel_thread.lib;cuda.lib;cudart_static.lib;cublas.lib;cusparse.lib;cusolver.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>vcompd.lib</IgnoreSpecificDefaultLibraries>
     </Link>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -153,6 +156,9 @@
       <AdditionalDependencies>qtmain.lib;Qt5Core.lib;Qt5Gui.lib;Qt5OpenGL.lib;opengl32.lib;glu32.lib;Qt5Widgets.lib;Qt5Xml.lib;QGLViewer2.lib;libiomp5md.lib;mkl_intel_lp64.lib;mkl_core.lib;mkl_intel_thread.lib;cublas.lib;cusparse.lib;cusolver.lib;cuda.lib;cudart_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>vcomp.lib</IgnoreSpecificDefaultLibraries>
     </Link>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DescentOptimize.cpp" />
