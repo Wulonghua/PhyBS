@@ -38,12 +38,6 @@ public:
 
 
 private:
-	void swap(float **a, float **b)
-	{
-		float *t = *a;
-		*a = *b;
-		*b = t;
-	}
 
 	// split the matrix to diagonal and off-diagonal parts, A only remains the negative of off-diagonal parts,
 	// B_1 stores the inverse of the diagonal parts.

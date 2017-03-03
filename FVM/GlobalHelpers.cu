@@ -73,3 +73,11 @@ __global__ void printData(int *devicePtr, int m, int n)
 		printf("\n");
 	}
 }
+
+__host__ __device__
+void swap(float **a, float **b)
+{
+	float *t = *a;
+	*a = *b;
+	*b = t;
+}

@@ -11,6 +11,7 @@ FVM::FVM(QWidget *parent)
 	m_comboboxType->addItem(QStringLiteral("CPU_ProjDynamic_OpenMP"));
 	m_comboboxType->addItem(QStringLiteral("CPU_DescentOptimize"));
 	m_comboboxType->addItem(QStringLiteral("GPU_force"));
+	m_comboboxType->addItem(QStringLiteral("GPU_DescentOptimize"));
 	ui.mainToolBar->addWidget(m_comboboxType);
 
 	m_tetMesh = std::make_shared<TetMesh>();
@@ -173,13 +174,17 @@ void FVM::DoOneStep()
 
 		m_descentOpt->doDescentOpt(96);
 	}
-	else
+	else if (m_typeComputing == 4)
 	{
 		m_cudaInterface->computeInnerforces();
 
 		m_cudaInterface->computeGlobalStiffnessMatrix();
 
 		m_cudaInterface->doBackEuler(m_tetMesh->getNodes().data());
+	}
+	else
+	{
+		m_cudaInterface->doDescentOpt(m_integrator->getTimeStep(), 96, m_tetMesh->getNodes().data());
 	}
 
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");

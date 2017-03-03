@@ -492,7 +492,7 @@ __global__ void initDescentOpt(float *nodes, float *nodes_explicit, float *v, fl
 	}
 }
 
-// Descend Optimize Method
+/****************** Descend Optimize Method***********************************************/
 __global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *vols, float *Kd, float *inner_forces,float *Energys)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -599,6 +599,35 @@ __global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *
 	}
 }
 
+__global__ void updateChebyshev(float omega, int* fixed_mask, int num_nodes, float *nodes_next, float *nodes_last)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_nodes)	return;
+	if (fixed_mask[i] > 0) return;
+
+	int id;
+	for (int k = 0; k < 3; ++k)
+	{
+		id = 3 * i + k;
+		nodes_next[id] = omega * (nodes_next[id] - nodes_last[id]) + nodes_last[id];
+	}
+}
+
+__global__ void updateVelocity(int num_nodes, float inv_h, int *fixed_mask, float *nodes, float *nodes_explicit, float *v, float *v_last)
+{
+	int i = blockDim.x * blockIdx.x + threadIdx.x;
+	if (i >= num_nodes)	return;
+	if (fixed_mask[i] > 0) return;
+
+	int id;
+	for (int k = 0; k < 3; ++k)
+	{
+		id = 3 * i + k;
+		v_last[id] = v[id];
+		v[id] += (nodes[id] - nodes_explicit[id]) * inv_h;
+	}
+}
+/*******************************************************************************************/
 CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *restPoses, const int *constraintsMask,
 	int num_tets, const int *tets, const float youngs, const float nu, const float density,
 	int csr_nnz, int csr_m, float *csr_val, int *csr_row, int *csr_col, int *csr_diagonalIdx, int *csr_kIDinCSRval):
@@ -860,10 +889,11 @@ void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH
 		d_gravities, d_constraintsMask, alpha, n_nodes, d_Energy, d_nodes_next);
 }
 
-void CUDAInterface::doDescentOpt(float h, int iterations, bool isUpdateH)
+void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 {
 	m_alpha = 0.1;
 	initDescentOpt<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_nodes, d_nodes_explicit, d_velocities, d_velocities_last, m_timestep, n_nodes);
+	
 	for (int k = 0; k < iterations; ++k)
 	{
 		if (m_alpha < 0.01) break;
@@ -913,10 +943,13 @@ void CUDAInterface::doDescentOpt(float h, int iterations, bool isUpdateH)
 			}
 		}
 
-		//if (m_omega != 1.0)
-		//	m_posk_next = m_omega * (m_posk_next - m_posk_last) + m_posk_last;
+		if (m_omega != 1)
+			updateChebyshev<<<m_node_blocksPerGrid, m_node_threadsPerBlock >>>(m_omega, d_constraintsMask, n_nodes, d_nodes_next, d_nodes_last);
 
-		//m_posk_last = m_posk;
-		//m_posk = m_posk_next;
+		swap(&d_nodes_last, &d_nodes);
+		swap(&d_nodes, &d_nodes_next);
 	}
+
+	updateVelocity<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(n_nodes, 1.0 / m_timestep, d_constraintsMask, d_nodes, d_nodes_explicit, d_velocities, d_velocities_last);
+	cudaMemcpy(hostNode, d_nodes, sizeof(float)*n_nodes * 3, cudaMemcpyDeviceToHost);
 }

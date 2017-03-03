@@ -16,6 +16,8 @@ struct CSRmatrix
 	int *d_diagonalIdx;
 };
 
+__host__ __device__  void swap(float **a, float **b);
+
 __global__ void setDeviceArray(float *devicePtr, float v, int num);
 __global__ void setDeviceArray(float *devicePtr, int * mask, float v, int num);
 

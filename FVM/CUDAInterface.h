@@ -32,7 +32,7 @@ public:
 	void reset();
 
 
-	void doDescentOpt(float h, int iterations, bool isUpdateH); // h: timestep
+	void doDescentOpt(float h, int iterations, float *hostNode); // h: timestep
 
 private:
 	// Descent Optimize 
