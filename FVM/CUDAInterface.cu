@@ -340,7 +340,6 @@ __global__ void addFixContraintsAndGravity(float *nodes, float *rest, float *gra
 	{
 		inner_forces[3 * i + 1] += gravity[i];
 	}
-
 }
 
 __global__ void computeElasticForces(float *nodes, int *tets, int num_tets,
@@ -479,6 +478,7 @@ __global__ void setMassScaled(float *mass, float * mass_s, float s,int n)
 	mass_s[3 * i + 0] = mass_s[3 * i + 1] = mass_s[3 * i + 2] = mass[i] * s;
 }
 
+/****************** Descend Optimize Method***********************************************/
 __global__ void initDescentOpt(float *nodes, float *nodes_explicit, float *v, float *v_last, float h, int n)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -492,7 +492,6 @@ __global__ void initDescentOpt(float *nodes, float *nodes_explicit, float *v, fl
 	}
 }
 
-/****************** Descend Optimize Method***********************************************/
 __global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_tets, float *Dm_invs, float *ANs, float *mus, float *lambdas, float *vols, float *Kd, float *inner_forces,float *Energys)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -595,7 +594,7 @@ __global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *
 	for (int k = 0; k < 3; ++k)
 	{
 		id = i * 3 + k;
-		nodes_next[id] = nodes[id] - g[k] / (Hd[id]+m_h2_inv);
+		nodes_next[id] = nodes[id] - alpha * g[k] / (Hd[id]+m_h2_inv);
 	}
 }
 
@@ -625,6 +624,7 @@ __global__ void updateVelocity(int num_nodes, float inv_h, int *fixed_mask, floa
 		id = 3 * i + k;
 		v_last[id] = v[id];
 		v[id] += (nodes[id] - nodes_explicit[id]) * inv_h;
+		v[id] *= 0.99;
 	}
 }
 /*******************************************************************************************/
@@ -881,7 +881,7 @@ void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH
 {
 	if (isUpdateH)
 		cudaMemset(d_Hd,	 0, sizeof(float) * n_nodes * 3);
-	cudaMemset(d_b,		 0, sizeof(float) * n_nodes); // d_b is force
+	cudaMemset(d_b,		 0, sizeof(float) * n_nodes * 3); // d_b is force
 	cudaMemset(d_Energy, 0, sizeof(float) * n_nodes);
 
 	computeForceKd<<<m_tet_blocksPerGrid, m_tet_threadsPerBlock>>>(isUpdateH, d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_vols, d_Hd, d_b, d_Energy);
@@ -912,13 +912,13 @@ void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 				m_alpha *= 0.7;
 				iterations -= k - 8;
 				k -= 1;
-				cudaMemcpy(d_nodes_old, d_nodes, sizeof(float)*n_nodes, cudaMemcpyDeviceToDevice);
+				cudaMemcpy(d_nodes, d_nodes_old, sizeof(float)*n_nodes*3, cudaMemcpyDeviceToDevice);
 				continue;
 			}
 			else
 			{
 				m_energy_old = m_energy;
-				cudaMemcpy(d_nodes_old, d_nodes, sizeof(float)*n_nodes, cudaMemcpyDeviceToDevice);
+				cudaMemcpy(d_nodes_old, d_nodes, sizeof(float)*n_nodes*3, cudaMemcpyDeviceToDevice);
 			}
 		}
 
