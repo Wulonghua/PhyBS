@@ -573,10 +573,19 @@ __global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_nodes)	return;
-	if (fixed_mask[i] > 0) return;
 
-	// adds energys
 	int id;
+	if (fixed_mask[i] > 0)
+	{
+		for (int k = 0; k < 3; ++k)
+		{
+			id = i * 3 + k;
+			nodes_next[id] = nodes[id];
+		}
+		return;
+	}
+	// adds energys
+	
 	float m_h2_inv = masses[i] / (h*h);
 
 	for (int k = 0; k < 3; ++k)
@@ -885,21 +894,44 @@ void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH
 	cudaMemset(d_Energy, 0, sizeof(float) * n_nodes);
 
 	computeForceKd<<<m_tet_blocksPerGrid, m_tet_threadsPerBlock>>>(isUpdateH, d_nodes, d_tets, n_tets, d_Dm_inverses, d_ANs, d_mus, d_lambdas, d_vols, d_Hd, d_b, d_Energy);
+	//cudaDeviceSynchronize();
+	//printf("d_Hd:\n");
+	//printData << <1, 1 >> >(d_Hd, 1, 12);
+	//cudaDeviceSynchronize();
+	//std::cout << "elatic energy:" << sumEnergy() << std::endl;
+
 	updateNodesNextIter<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_Hd, d_b, d_masses, d_nodes, d_nodes_explicit, d_velocities, m_timestep,
 		d_gravities, d_constraintsMask, alpha, n_nodes, d_Energy, d_nodes_next);
+	//cudaDeviceSynchronize();
 }
 
 void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 {
 	m_alpha = 0.1;
 	initDescentOpt<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_nodes, d_nodes_explicit, d_velocities, d_velocities_last, m_timestep, n_nodes);
-	
+	//cudaDeviceSynchronize();
 	for (int k = 0; k < iterations; ++k)
 	{
 		if (m_alpha < 0.01) break;
 		bool isUpdateH = false;
 		if (k % 32 == 0)
 			isUpdateH = true;
+
+		//printf("d_nodes:\n");
+		//printData << <1, 1 >> >(d_nodes, 1, 12);
+		//cudaDeviceSynchronize();
+
+		//printf("d_nodes_explicit:\n");
+		//printData << <1, 1 >> >(d_nodes_explicit, 1, 12);
+		//cudaDeviceSynchronize();
+
+		//printf("d_velocities:\n");
+		//printData << <1, 1 >> >(d_velocities, 1, 12);
+		//cudaDeviceSynchronize();
+
+		//printf("d_velocities_last:\n");
+		//printData << <1, 1 >> >(d_velocities_last, 1, 12);
+		//cudaDeviceSynchronize();
 
 		updateDescentOptOneIter(m_alpha, m_timestep, isUpdateH);
 
@@ -913,6 +945,12 @@ void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 				iterations -= k - 8;
 				k -= 1;
 				cudaMemcpy(d_nodes, d_nodes_old, sizeof(float)*n_nodes*3, cudaMemcpyDeviceToDevice);
+
+				//std::cout << "restore to last state: " << m_energy_old << std::endl;
+				//std::cout << "k = " << k << std::endl;
+				//std::cout << "alpha =" << m_alpha << std::endl;
+				//std::cout << "iterations = " << iterations << std::endl;
+
 				continue;
 			}
 			else
@@ -944,10 +982,20 @@ void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 		}
 
 		if (m_omega != 1)
-			updateChebyshev<<<m_node_blocksPerGrid, m_node_threadsPerBlock >>>(m_omega, d_constraintsMask, n_nodes, d_nodes_next, d_nodes_last);
+		{
+			updateChebyshev << <m_node_blocksPerGrid, m_node_threadsPerBlock >> >(m_omega, d_constraintsMask, n_nodes, d_nodes_next, d_nodes_last);
+			//cudaDeviceSynchronize();
+		}
 
+
+		//printf("d_nodes_next befor swap:\n");
+		//printData << <1, 1 >> >(d_nodes_next, 1, 12);
+		//cudaDeviceSynchronize();
 		swap(&d_nodes_last, &d_nodes);
 		swap(&d_nodes, &d_nodes_next);
+		//printf("d_nodes after swap:\n");
+		//printData << <1, 1 >> >(d_nodes, 1, 12);
+		//cudaDeviceSynchronize();
 	}
 
 	updateVelocity<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(n_nodes, 1.0 / m_timestep, d_constraintsMask, d_nodes, d_nodes_explicit, d_velocities, d_velocities_last);
