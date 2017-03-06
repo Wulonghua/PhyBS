@@ -171,6 +171,10 @@ void TetMesh::initModel()
 	initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
 	initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
 
+	//initNodesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.face"));
+
 	m_Dm_inverses = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	setTetMaterial(1000000, 0.45,1000);

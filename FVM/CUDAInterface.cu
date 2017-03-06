@@ -569,7 +569,7 @@ __global__ void computeForceKd(bool computeHd, float *nodes, int *tets, int num_
 
 // compute delta_q (see CPU version codes for reference) and update nodes_next, also add energy
 // b: inner force
-__global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *nodes, float *nodes_explicit, float *v, float h, float *gravitys, int *fixed_mask, float alpha, int num_nodes, float *Energys, float *nodes_next)
+__global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *nodes, float *nodes_explicit, float *v, float h, float *gravitys, float *extern_forces, int *fixed_mask, float alpha, int num_nodes, float *Energys, float *nodes_next)
 {
 	int i = blockDim.x * blockIdx.x + threadIdx.x;
 	if (i >= num_nodes)	return;
@@ -591,14 +591,15 @@ __global__ void updateNodesNextIter(float *Hd, float *b , float *masses, float *
 	for (int k = 0; k < 3; ++k)
 	{
 		id = i * 3 + k;
-		Energys[i] += 0.5 * (nodes[id] - nodes_explicit[id]) * (nodes[id] - nodes_explicit[id]) * m_h2_inv; 
+		Energys[i] += 0.5 * (nodes[id] - nodes_explicit[id]) * (nodes[id] - nodes_explicit[id]) * m_h2_inv;
+		Energys[i] -= extern_forces[id] * nodes[id];
 	}
 	Energys[i] += 9.8 * nodes[i * 3 + 1] * masses[i];
 
 	float g[3];
-	g[0] = (nodes[i * 3    ] - nodes_explicit[i * 3    ]) * m_h2_inv - b[i * 3    ];
-	g[1] = (nodes[i * 3 + 1] - nodes_explicit[i * 3 + 1]) * m_h2_inv - b[i * 3 + 1] - gravitys[i];
-	g[2] = (nodes[i * 3 + 2] - nodes_explicit[i * 3 + 2]) * m_h2_inv - b[i * 3 + 2];
+	g[0] = (nodes[i * 3    ] - nodes_explicit[i * 3    ]) * m_h2_inv - b[i * 3    ] - extern_forces[i * 3];
+	g[1] = (nodes[i * 3 + 1] - nodes_explicit[i * 3 + 1]) * m_h2_inv - b[i * 3 + 1] - extern_forces[i * 3 + 1] - gravitys[i];
+	g[2] = (nodes[i * 3 + 2] - nodes_explicit[i * 3 + 2]) * m_h2_inv - b[i * 3 + 2] - extern_forces[i * 3 + 2];
 
 	for (int k = 0; k < 3; ++k)
 	{
@@ -664,6 +665,7 @@ CUDAInterface::CUDAInterface(int num_nodes, const float *nodes, const float *res
 	cudaMalloc((void **)&d_velocities_last, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_masses, sizeof(float) * n_nodes);
 	cudaMalloc((void **)&d_gravities, sizeof(float) * n_nodes);
+	cudaMalloc((void **)&d_external_forces, sizeof(float) * 3 * n_nodes);
 	cudaMalloc((void **)&d_masses_scaled, sizeof(float) * n_nodes*3);
 	cudaMalloc((void **)&d_constraintsMask, sizeof(int) * n_nodes);
 	cudaMalloc((void **)&d_ANs, sizeof(float) * 9 * n_tets);
@@ -759,6 +761,7 @@ CUDAInterface::~CUDAInterface()
 	cudaFree(d_velocities_last);
 	cudaFree(d_masses);
 	cudaFree(d_gravities);
+	cudaFree(d_external_forces);
 	cudaFree(d_masses_scaled);
 	cudaFree(d_b);
 	cudaFree(d_Hd);
@@ -886,7 +889,7 @@ float CUDAInterface::sumEnergy()
 	return thrust::reduce(d_e, d_e + n_nodes);
 }
 
-void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH)
+void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH, float *extForces)
 {
 	if (isUpdateH)
 		cudaMemset(d_Hd,	 0, sizeof(float) * n_nodes * 3);
@@ -901,12 +904,13 @@ void CUDAInterface::updateDescentOptOneIter(float alpha, float h, bool isUpdateH
 	//std::cout << "elatic energy:" << sumEnergy() << std::endl;
 
 	updateNodesNextIter<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_Hd, d_b, d_masses, d_nodes, d_nodes_explicit, d_velocities, m_timestep,
-		d_gravities, d_constraintsMask, alpha, n_nodes, d_Energy, d_nodes_next);
+		d_gravities, d_external_forces, d_constraintsMask, alpha, n_nodes, d_Energy, d_nodes_next);
 	//cudaDeviceSynchronize();
 }
 
-void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
+void CUDAInterface::doDescentOpt(float h, int iterations, float *hostExternForces, float *hostNode)
 {
+	cudaMemcpy(d_external_forces, hostExternForces, sizeof(float)*n_nodes * 3, cudaMemcpyHostToDevice);
 	m_alpha = 0.1;
 	initDescentOpt<<<m_node_blocksPerGrid, m_node_threadsPerBlock>>>(d_nodes, d_nodes_explicit, d_velocities, d_velocities_last, m_timestep, n_nodes);
 	//cudaDeviceSynchronize();
@@ -933,7 +937,7 @@ void CUDAInterface::doDescentOpt(float h, int iterations, float *hostNode)
 		//printData << <1, 1 >> >(d_velocities_last, 1, 12);
 		//cudaDeviceSynchronize();
 
-		updateDescentOptOneIter(m_alpha, m_timestep, isUpdateH);
+		updateDescentOptOneIter(m_alpha, m_timestep, isUpdateH,d_external_forces);
 
 		if (k % 8 == 0)
 		{

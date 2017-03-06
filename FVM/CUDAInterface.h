@@ -32,11 +32,11 @@ public:
 	void reset();
 
 
-	void doDescentOpt(float h, int iterations, float *hostNode); // h: timestep
+	void doDescentOpt(float h, int iterations, float *hostExternForces,float *hostNode); // h: timestep
 
 private:
 	// Descent Optimize 
-	void updateDescentOptOneIter(float alpha, float h, bool isUpdateH);
+	void updateDescentOptOneIter(float alpha, float h, bool isUpdateH, float *extForces);
 	float sumEnergy();
 
 	  int n_nodes;
@@ -54,6 +54,7 @@ private:
 	  float *d_velocities_last;
 	  float *d_masses;
 	  float *d_gravities;
+	  float *d_external_forces;
 	  float *d_masses_scaled;    // (1+dumping_alpha*timestep)*M
 	  float *d_ANs;
 	  float *d_vols;			// tet's volumn

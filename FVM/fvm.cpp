@@ -184,7 +184,8 @@ void FVM::DoOneStep()
 	}
 	else
 	{
-		m_cudaInterface->doDescentOpt(m_integrator->getTimeStep(), 96, m_tetMesh->getNodes().data());
+		m_cudaInterface->doDescentOpt(m_integrator->getTimeStep(), 96, m_tetMesh->getExternalForces().data(), m_tetMesh->getNodes().data());
+		m_tetMesh->resetExternalForce();
 	}
 
 	//QString node_file = QStringLiteral("bar_%1").arg(++m_frameID) + QStringLiteral(".node");
