@@ -34,6 +34,11 @@ void TetMesh::initNodesFromFile(QString filename)
 		for (size_t i = 0; i < n_nodes; ++i)
 		{
 			fin >> prefix >> m_rest_positions(0, i) >> m_rest_positions(1, i) >> m_rest_positions(2, i);
+			
+			m_rest_positions.col(i) *= 0.1;
+			if (m_rest_positions(2, i) > 0 && m_rest_positions(1, i) > 8.5)
+				m_constraintIDs.push_back(i);
+
 
 			//if (m_rest_positions(0, i) == -2.5)
 			//	m_constraintIDs.push_back(i);
@@ -41,8 +46,8 @@ void TetMesh::initNodesFromFile(QString filename)
 			//if (m_rest_positions(1, i) > 0.16)
 			//	m_constraintIDs.push_back(i);
 
-			if (m_rest_positions(1, i) < -1.8)
-				m_constraintIDs.push_back(i);
+			//if (m_rest_positions(1, i) < -1.8)
+			//	m_constraintIDs.push_back(i);
 		}
 		//m_constraintIDs.push_back(0);
 		m_nodes = m_rest_positions;
@@ -167,17 +172,17 @@ void TetMesh::initModel()
 	//initTetsFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.ele"));
 	//initFacesFromFile(QStringLiteral("..\\model\\bar2\\bar2.1.face"));
 
-	initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
-	initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
-	initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
+	//initNodesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.node"));
+	//initTetsFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.ele"));
+	//initFacesFromFile(QStringLiteral("..\\model\\asiandragon\\asiandragon.1.face"));
 
-	//initNodesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.node"));
-	//initTetsFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.ele"));
-	//initFacesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.face"));
+	initNodesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.node"));
+	initTetsFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.ele"));
+	initFacesFromFile(QStringLiteral("..\\model\\armadillo\\armadillo.1.face"));
 
 	m_Dm_inverses = Eigen::MatrixXf::Zero(3, n_tets * 3);
 	m_ANs		  = Eigen::MatrixXf::Zero(3, n_tets * 3);
-	setTetMaterial(1000000, 0.45,1000);
+	setTetMaterial(500000, 0.45,1000);
 
 	// precompute dim_inverse for each tetrahedron and bi for three nodes in each tetrahedron
 	// also each node's weight

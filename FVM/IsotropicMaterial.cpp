@@ -562,6 +562,28 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 	//	gK.reserve(Eigen::VectorXf::Constant(3 * n, 120));
 	//m_reserveSize.reserve(3 * n);
 
+	// the following method is rather slow when importing high-resolution model
+	//for (int i = 0; i < m; ++i)
+	//{
+	//	for (int fi = 0; fi < 4; ++fi)
+	//	{
+	//		for (int fj = 0; fj < 3; ++fj)
+	//		{
+	//			gKi = m_tetModel->getNodeGlobalIDinTet(i, fi) * 3 + fj;
+	//			for (int ni = 0; ni < 4; ++ni)
+	//			{
+	//				for (int nj = 0; nj < 3; ++nj)
+	//				{
+	//					gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
+	//					m_globalK.coeffRef(gKi, gKj) += 1;
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
+
+	typedef Eigen::Triplet<float> Tri;
+	std::vector<Tri> triList;
 	for (int i = 0; i < m; ++i)
 	{
 		for (int fi = 0; fi < 4; ++fi)
@@ -574,13 +596,17 @@ void IsotropicMaterial::allocateGlobalStiffnessMatrix()
 					for (int nj = 0; nj < 3; ++nj)
 					{
 						gKj = m_tetModel->getNodeGlobalIDinTet(i, ni) * 3 + nj;
-						m_globalK.coeffRef(gKi, gKj) += 1;
+						//m_globalK.coeffRef(gKi, gKj) += 1;
+						triList.push_back(Tri(gKi, gKj, 1));
 					}
 				}
 			}
 		}
 	}
+	m_globalK.setFromTriplets(triList.begin(), triList.end());
 
+
+	std::cout << "stiffness matrix memory initialized" << std::endl;
 	//for (int i = 0; i < 3 * n; ++i)
 	//	m_reserveSize.push_back(m_globalK.col(i).sum());
 
