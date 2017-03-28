@@ -1,12 +1,15 @@
 # PhyBS
 
-This project is for my PhD independent study, which implements basic and important soft body deformation papers in literature, including force-based simulation, position-based and projective dynamics. Various improvements in numerical solvers and parallelism make it possible to interact with the models in real time.
+This project is for my PhD independent study, which implements basic and important soft body deformation papers in literature, including force-based simulation, position-based and projective dynamics. Various improvements in numerical solvers and parallelism make it possible to interact with the models in real time. The latest demo shows that for an armadillo model with 43K tets and 12K nodes, the FPS is around 65 running on GPU which is significantly faster than CPU version codes.
 
 The codes was tested with the following configurations:
 -Windows 10, Visual Studio 2013, Qt 5.6.2, Eigen 3, CUDA 8.0, Intel Parallel Studio XE 2017.
 
-## Features
+## Demo
+* GPU accelearted elastic body simulation [7,8]
+[![Video](https://img.youtube.com/vi/urxVQI-3MAw/0.jpg)](https://www.youtube.com/watch?v=urxVQI-3MAw)
 
+## Rome wasn't built in a day
 * FEM/FVM force-based simulation[1]                                                    
 
 [![Video](https://img.youtube.com/vi/RZTT9vSTd5M/0.jpg)](https://www.youtube.com/watch?v=RZTT9vSTd5M)
@@ -22,11 +25,6 @@ The codes was tested with the following configurations:
 * Position based dynamics using strain constraints[5]                              
 
 [![Video](https://img.youtube.com/vi/HgDR9nFfIRs/0.jpg)](https://www.youtube.com/watch?v=HgDR9nFfIRs)
-
-## To-do List
-
-* Accelerate solver using CUDA
-* Implement projective dynamics [6-8]
 
 
 ## References
