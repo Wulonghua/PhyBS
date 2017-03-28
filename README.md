@@ -7,6 +7,7 @@ The codes was tested with the following configurations:
 
 ## Demo
 * GPU accelearted elastic body simulation [7,8]
+
 [![Video](https://img.youtube.com/vi/urxVQI-3MAw/0.jpg)](https://www.youtube.com/watch?v=urxVQI-3MAw)
 
 ## Rome wasn't built in a day
