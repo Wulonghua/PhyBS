@@ -6,7 +6,7 @@ The codes was tested with the following configurations:
 -Windows 10, Visual Studio 2013, Qt 5.6.2, Eigen 3, CUDA 8.0, Intel Parallel Studio XE 2017.
 
 ## Demo
-* GPU accelearted elastic body simulation [7,8]
+* GPU accelearted elastic body simulation [8,9]
 
 [![Video](https://img.youtube.com/vi/urxVQI-3MAw/0.jpg)](https://www.youtube.com/watch?v=urxVQI-3MAw)
 
@@ -23,7 +23,7 @@ The codes was tested with the following configurations:
 
 [![Video](https://img.youtube.com/vi/xZR5uczls28/0.jpg)](https://www.youtube.com/watch?v=xZR5uczls28)
 
-* Position based dynamics using strain constraints[5]                              
+* Position based dynamics using strain constraints[5,6]                              
 
 [![Video](https://img.youtube.com/vi/HgDR9nFfIRs/0.jpg)](https://www.youtube.com/watch?v=HgDR9nFfIRs)
 
@@ -37,10 +37,12 @@ The codes was tested with the following configurations:
 
 [4] Hongyi X. , Fun Shing S. , Yufeng Z. , Jernej B. Nonlinear Material Design Using Principal Stretches, ACM Transactions on Graphics 34(4) (SIGGRAPH 2015), Los Angeles, CA, USA
 
-[5] Müller, M., Chentanez, N., Kim, T. Y., & Macklin, M. (2014, July). Strain based dynamics. In Proceedings of the ACM SIGGRAPH/Eurographics Symposium on Computer Animation (pp. 149-157). Eurographics Association.
+[5] Müller, M., Heidelberger, B., Hennix, M. and Ratcliff, J., 2007. Position based dynamics. Journal of Visual Communication and Image Representation, 18(2), pp.109-118.
 
-[6] Bouaziz, S., Martin, S., Liu, T., Kavan, L., & Pauly, M. (2014). Projective dynamics: fusing constraint projections for fast simulation. ACM Transactions on Graphics (TOG), 33(4), 154.
+[6] Müller, M., Chentanez, N., Kim, T. Y., & Macklin, M. (2014, July). Strain based dynamics. In Proceedings of the ACM SIGGRAPH/Eurographics Symposium on Computer Animation (pp. 149-157). Eurographics Association.
 
-[7] Wang, H. (2015). A chebyshev semi-iterative approach for accelerating projective and position-based dynamics. ACM Transactions on Graphics (TOG), 34(6), 246.
+[7] Bouaziz, S., Martin, S., Liu, T., Kavan, L., & Pauly, M. (2014). Projective dynamics: fusing constraint projections for fast simulation. ACM Transactions on Graphics (TOG), 33(4), 154.
 
-[8] Wang, H., & Yang, Y. (2016). Descent methods for elastic body simulation on the GPU. ACM Transactions on Graphics (TOG), 35(6), 212.
+[8] Wang, H. (2015). A chebyshev semi-iterative approach for accelerating projective and position-based dynamics. ACM Transactions on Graphics (TOG), 34(6), 246.
+
+[9] Wang, H., & Yang, Y. (2016). Descent methods for elastic body simulation on the GPU. ACM Transactions on Graphics (TOG), 35(6), 212.
