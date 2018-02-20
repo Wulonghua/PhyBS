@@ -6,7 +6,7 @@ The codes was tested with the following configurations:
 -Windows 10, Visual Studio 2013, Qt 5.6.2, Eigen 3, CUDA 8.0, Intel Parallel Studio XE 2017.
 
 ## Demo
-* GPU accelearted elastic body simulation [8,9]
+* GPU accelerated elastic body simulation [8,9]
 
 [![Video](https://img.youtube.com/vi/urxVQI-3MAw/0.jpg)](https://www.youtube.com/watch?v=urxVQI-3MAw)
 
